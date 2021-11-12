@@ -4,18 +4,23 @@ from argparse import ArgumentParser, Action
 from enum import Enum
 from io import BytesIO
 import zipfile
-import pdb
 import sys
 from urllib.request import urlopen
-
 from applitoolsify.__version__ import __version__
 
+FILES_SKIP_LIST = [".DS_Store"]
+VERBOSE = False
 
-print(sys.path[0])
+
+def print_verbose(*args, **kwargs):
+    if VERBOSE:
+        print(*args, **kwargs)
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
+        if item in FILES_SKIP_LIST:
+            continue
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
         if os.path.isdir(s):
@@ -29,7 +34,7 @@ def yes_no(answer):
     no = {"no", "n"}
 
     while True:
-        choice = input(answer).lower()
+        choice = input(answer + "(y/n)\n").lower()
         if choice in yes:
             return True
         elif choice in no:
@@ -92,11 +97,21 @@ class SdkDownloadManager(object):
 
     def download_and_extract(self):
         # type: () -> SdkData
-        if not self.force_update:
-            # return path to sdk if already downloaded
-            if os.path.exists(self.sdk_data.sdk_location):
+        if not self.force_update and os.path.exists(self.sdk_data.sdk_location):
+            # return sdk data if already downloaded
+            print(
+                "We've detected saved version of `{}` in `{}`".format(
+                    self.sdk_data.name, self.sdk_data.sdk_location
+                )
+            )
+            if yes_no("Continue with this version of `{}`?".format(self.sdk_data.name)):
                 return self.sdk_data
 
+        print_verbose(
+            "Downloading `{}` to `{}`".format(
+                self.sdk_data.name, self.sdk_data.sdk_location
+            )
+        )
         # download sdk if not present or `force_update` called
         with urlopen(self.sdk_data.download_url) as zipresp:
             with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
@@ -122,6 +137,7 @@ class SdkDownloadManager(object):
         ):
             raise RuntimeError("`{}` not present in archive")
 
+        # find index of searched dir to split in the future
         extract_dir_name_index = -1
         for member in zfile.filelist:
             if not member.is_dir():
@@ -214,34 +230,93 @@ def cli_parser():
     return parser
 
 
-def find_dirs_with_name(root_path, dirname):
-    all_files = []
-    for root, dirs, files in os.walk(root_path):
-        for cur_dirname in dirs:
-            if cur_dirname.lower() == dirname.lower():
-                all_files.append(os.path.join(root, dirname))
-    return all_files
+class _PatcherStrategy(object):
+    def __init__(
+        self, sdk_data, framework_in_app, signing_certificate_name, provisioning_profile
+    ):
+        self.sdk_data = sdk_data
+        self.framework_in_app = framework_in_app
+        self.signing_certificate_name = signing_certificate_name
+        self.provisioning_profile = provisioning_profile
+
+    def __call__(self):
+        raise NotImplemented
+
+
+class AppPatcher(_PatcherStrategy):
+    def __call__(self):
+        copytree(self.sdk_data.sdk_location, self.framework_in_app)
+
+
+class IpaPatcher(_PatcherStrategy):
+    def __call__(self):
+        ...
+
+    def resign(self):
+        ...
+
+    def repackage(self):
+        ...
+
+
+class Patcher(object):
+    patch_strategies = {"app": AppPatcher, "ipa": IpaPatcher}
+
+    def __init__(
+        self,
+        path_to_app,
+        sdk_data,
+        signing_certificate_name=None,
+        provisioning_profile=None,
+    ):
+        # type: (str, SdkData, str, str) -> None
+        self.path_to_app = path_to_app
+        self.app_name = os.path.basename(path_to_app)
+        _, self.app_ext = os.path.splitext(path_to_app)
+        self.framework_in_app = os.path.join(path_to_app, "Frameworks", sdk_data.name)
+        self.sdk_data = sdk_data
+        self._patch = self.patch_strategies[self.app_ext.lstrip(".")](
+            sdk_data=sdk_data,
+            framework_in_app=self.framework_in_app,
+            signing_certificate_name=signing_certificate_name,
+            provisioning_profile=provisioning_profile,
+        )
+
+    def was_already_patched(self):
+        if os.path.exists(self.framework_in_app):
+            return True
+        else:
+            return False
+
+    def patch(self):
+        if self.was_already_patched():
+            if yes_no("App already patched. Re-patch?"):
+                # remove old installation
+                shutil.rmtree(self.framework_in_app)
+
+        self._patch()
+        print_verbose(
+            "`{}` framework was added to `{}`".format(
+                self.sdk_data.name, self.framework_in_app
+            )
+        )
 
 
 def run():
     args = cli_parser().parse_args()
-    path_to_app = args.path_to_app
+    if args.verbose:
+        global VERBOSE
+        VERBOSE = True
+
     sdk_data = SdkDownloadManager.from_sdk_name(
         args.sdk, args.force_update
     ).download_and_extract()
 
-    if path_to_app.endswith(".app"):
-        framework_path = os.path.join(path_to_app, "Frameworks")
-        if not os.path.exists(framework_path):
-            os.mkdir(framework_path)
-        else:
-            sdk_files = os.listdir(sdk_data.sdk_location)
-            potential_patched_path = os.path.join(framework_path, sdk_data.name)
-            find_dirs_with_name(potential_patched_path, "")
-            if yes_no("App already patched. Re-patch?"):
-                shutil.rmtree(potential_patched_path)
-        copytree(sdk_data.sdk_location, framework_path)
-        print("{} framework was added to {}".format(sdk_data.name, framework_path))
+    path_to_app = args.path_to_app
+    patcher = Patcher(
+        path_to_app, sdk_data, args.signing_certificate_name, args.provisioning_profile
+    )
+    patcher.patch()
     print("{} is ready for use with the {}".format(path_to_app, sdk_data.name))
 
 
