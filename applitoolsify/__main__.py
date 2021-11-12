@@ -107,7 +107,7 @@ class SdkDownloadManager(object):
             if yes_no("Continue with this version of `{}`?".format(self.sdk_data.name)):
                 return self.sdk_data
 
-        print_verbose(
+        print(
             "Downloading `{}` to `{}`".format(
                 self.sdk_data.name, self.sdk_data.sdk_location
             )
@@ -174,13 +174,17 @@ class SdkDownloadManager(object):
         return target_dir
 
 
-class ValidatePathToApp(Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if not os.path.exists(values):
-            raise ValueError("`path_to_app` does not exist")
-        if not values.endswith(".app") and not values.endswith(".ipa"):
-            raise ValueError("`path_to_app` parameter must be an `.app` or `.ipa` file")
-        setattr(namespace, self.dest, values)
+def validate_path_to_app(value):
+    # type: (str)->bool
+    if not os.path.exists(value):
+        print("Path `{}` does not exist".format(value))
+        return False
+    if not value.endswith(".app") and not value.endswith(".ipa"):
+        print(
+            "Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
+        )
+        return False
+    return True
 
 
 def cli_parser():
@@ -205,13 +209,11 @@ def cli_parser():
     parser.add_argument(
         "path_to_app",
         type=str,
-        action=ValidatePathToApp,
         help="Path to the `.app` or `.ipa` for applitoolsify",
     )
     parser.add_argument(
         "sdk",
         choices=[e.value for e in SdkParams],
-        # action=ManageSdkFrameworks,
         help="Select SDK for applitoolsify",
     )
 
@@ -219,12 +221,12 @@ def cli_parser():
     parser.add_argument(
         "signing_certificate_name",
         nargs="?",
-        help="TODO",
+        help="Name of the Certificate to be Used",
     )
     parser.add_argument(
         "provisioning_profile",
         nargs="?",
-        help="TODO",
+        help="Provisioning Profile to be Used",
     )
     parser.set_defaults(command=lambda _: parser.print_help())
     return parser
@@ -293,17 +295,28 @@ class Patcher(object):
             if yes_no("App already patched. Re-patch?"):
                 # remove old installation
                 shutil.rmtree(self.framework_in_app)
-
+            else:
+                print("Skip pathing")
+                return
         self._patch()
         print_verbose(
             "`{}` framework was added to `{}`".format(
                 self.sdk_data.name, self.framework_in_app
             )
         )
+        print(
+            "{} is ready for use with the {}".format(
+                self.path_to_app, self.sdk_data.name
+            )
+        )
 
 
 def run():
     args = cli_parser().parse_args()
+
+    if not validate_path_to_app(args.path_to_app):
+        return
+
     if args.verbose:
         global VERBOSE
         VERBOSE = True
@@ -312,12 +325,13 @@ def run():
         args.sdk, args.force_update
     ).download_and_extract()
 
-    path_to_app = args.path_to_app
     patcher = Patcher(
-        path_to_app, sdk_data, args.signing_certificate_name, args.provisioning_profile
+        args.path_to_app,
+        sdk_data,
+        args.signing_certificate_name,
+        args.provisioning_profile,
     )
     patcher.patch()
-    print("{} is ready for use with the {}".format(path_to_app, sdk_data.name))
 
 
 run()
