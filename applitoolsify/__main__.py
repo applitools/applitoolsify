@@ -12,6 +12,19 @@ FILES_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
 
 
+def validate_path_to_app(value):
+    # type: (str)->bool
+    if not os.path.exists(value):
+        print("Path `{}` does not exist".format(value))
+        return False
+    if not value.endswith(".app") and not value.endswith(".ipa"):
+        print(
+            "Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
+        )
+        return False
+    return True
+
+
 def print_verbose(*args, **kwargs):
     if VERBOSE:
         print(*args, **kwargs)
@@ -68,14 +81,12 @@ SUPPORTED_FRAMEWORKS = {
         **{
             "name": "UFG_lib.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/ufg-mobile/UFG_lib.xcframework.zip",
-            # "stores_at_path": None,
         }
     ),
     SdkParams.ios_classic: SdkData(
         **{
             "name": "EyesiOSHelper.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip",
-            # "stores_at_path": None,
         }
     ),
 }
@@ -86,6 +97,7 @@ class SdkDownloadManager(object):
         # type: (SdkData, bool) -> None
         self.force_update = force_update
         self.sdk_data = sdk_data
+        # TODO: change it to tmp?
         self.sdks_dir = os.path.join(sys.path[0], "APPLITOOLS_SDKS")
         self.sdk_data.add_sdk_location(os.path.join(self.sdks_dir, self.sdk_data.name))
 
@@ -172,19 +184,6 @@ class SdkDownloadManager(object):
             with zfile.open(member) as source, open(targetpath, "wb") as target:
                 shutil.copyfileobj(source, target)
         return target_dir
-
-
-def validate_path_to_app(value):
-    # type: (str)->bool
-    if not os.path.exists(value):
-        print("Path `{}` does not exist".format(value))
-        return False
-    if not value.endswith(".app") and not value.endswith(".ipa"):
-        print(
-            "Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
-        )
-        return False
-    return True
 
 
 def cli_parser():
@@ -296,7 +295,7 @@ class Patcher(object):
                 # remove old installation
                 shutil.rmtree(self.framework_in_app)
             else:
-                print("Skip pathing")
+                print("Skip patching")
                 return
         self._patch()
         print_verbose(
