@@ -1,6 +1,5 @@
 import codecs
 import re
-import sys
 from os import path
 
 from setuptools import find_packages, setup
@@ -14,7 +13,7 @@ def read(filename):
 
 # preventing ModuleNotFoundError caused by importing lib before installing deps
 def get_version(package_name):
-    version_file = read("{}/__version__.py".format(package_name))
+    version_file = read("applitoolsify/applitoolsify.py")
     try:
         version = re.findall(r"^__version__ = \"([^']+)\"\r?$", version_file, re.M)[0]
     except IndexError:
@@ -22,30 +21,6 @@ def get_version(package_name):
 
     return version
 
-
-install_requires = ["requests"]
-
-#
-# if sys.version_info[:2] <= (2, 7):
-#     install_requires.append("tinycss2==0.6.1")
-# else:
-#     install_requires.append("tinycss2>=0.6.1,<1.1.0")
-
-# using this way of defining instead of 'typing>=3.5.2; python_version<="3.4"'
-# for run on old version of setuptools without issues
-if sys.version_info[:2] < (3, 5):
-    # typing module was added as builtin in Python 3.5
-    install_requires.append("typing >= 3.5.2")
-
-# if sys.version_info[:1] < (3,):
-#     install_requires.append("futures==3.2.0")
-
-# brotli doesn't have binary distribution on py27/win64
-# so let's use brotlipy there to avoid requirement to have msvc to build
-# if sys.version_info[:1] < (3,) and sys.platform.startswith("win"):
-#     install_requires.append("brotlipy==0.7.0")
-# else:
-#     install_requires.append("brotli>=1.0.9")
 
 setup(
     name="applitoolsify",
@@ -71,7 +46,6 @@ setup(
         "Topic :: Software Development :: Testing",
     ],
     keywords="applitools eyes eyes_selenium",
-    install_requires=install_requires,
     package_data={
         "": ["README.rst", "LICENSE"],
         "applitoolsify": [
