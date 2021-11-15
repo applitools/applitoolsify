@@ -1,6 +1,9 @@
 import os
+import plistlib
 import shutil
-from argparse import ArgumentParser, Action
+import subprocess
+import tempfile
+from argparse import ArgumentParser
 from enum import Enum
 from io import BytesIO
 import zipfile
@@ -279,14 +282,95 @@ class AppPatcher(_PatcherStrategy):
 
 
 class IpaPatcher(_PatcherStrategy):
-    def __call__(self):
-        ...
+    SECURITY = "/usr/bin/security"
+    CODESIGN = "/usr/bin/codesign"
+    DITTO = "/usr/bin/ditto"
 
-    def resign(self):
-        ...
+    def __init__(self, *args, **kwargs):
+        super(IpaPatcher, self).__init__(*args, **kwargs)
 
-    def repackage(self):
-        ...
+        self.tmp_dir = tempfile.mkdtemp()
+        self.extracted_dir_path = os.path.join(self.tmp_dir, "extracted")
+        self.entitlements_file_path = os.path.join(self.tmp_dir, "entitlements.plist")
+        self._app_in_payload = None
+        with zipfile.ZipFile(self.path_to_app) as zfile:
+            zfile.extractall(self.extracted_dir_path)
+
+    @property
+    def app_in_payload(self):
+        if self._app_in_payload is None:
+            payload_in_app = os.path.join(self.extracted_dir_path, "Payload")
+            apps_in_payolad = os.listdir(payload_in_app)
+            if len(apps_in_payolad) > 1:
+                raise RuntimeError("Payload contains more then one app")
+            self._app_in_payload = apps_in_payolad[0]
+        return self._app_in_payload
+
+    @property
+    def sdk_in_app_framework(self):
+        return os.path.join(self.app_in_payload, "Frameworks", self.sdk_data.name)
+
+    def patch(self):
+        copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
+        self._resign()
+        self._repackage()
+
+    def __extract_entitlements(self, profile_in_app_path):
+        pl_str = subprocess.check_output(
+            [self.SECURITY, "cms", "-D", "-i", profile_in_app_path]
+        )
+        pl = plistlib.loads(pl_str)
+        ent = pl["Entitlements"]
+        with open(self.entitlements_file_path, "wb") as f:
+            plistlib.dump(ent, f)
+
+    def __find_files_to_sign(self):
+        to_sign_files = []
+        for root, dirs, files in os.walk(self.extracted_dir_path):
+            for name in files:
+                _, ext = os.path.splitext(name)
+                if ext.lstrip(".").lower() in ["app", "appex", "framework", "dylib"]:
+                    to_sign_files.append(name)
+        return to_sign_files
+
+    def __sign_files(self, to_sign_files):
+        for to_sign in to_sign_files:
+            subprocess.check_call(
+                [
+                    self.CODESIGN,
+                    "--continue",
+                    "-f",
+                    "-s",
+                    self.signing_certificate_name,
+                    "--entitlements",
+                    self.entitlements_file_path,
+                    to_sign,
+                ]
+            )
+
+    def _resign(self):
+        profile_in_app_path = os.path.join(
+            self.app_in_payload, "embedded.mobileprovision"
+        )
+        shutil.copy2(self.provisioning_profile, profile_in_app_path)
+        print("Resigning with certificate: {}".format(self.signing_certificate_name))
+        to_sign_files = self.__find_files_to_sign()
+        self.__extract_entitlements(profile_in_app_path)
+        self.__sign_files(to_sign_files)
+        self._repackage()
+
+    def _repackage(self):
+        subprocess.check_call(
+            [
+                self.DITTO,
+                "-c",
+                "-k",
+                "--sequesterRsrc",
+                "--keepParent",
+                os.path.join(self.extracted_dir_path, "Payload"),
+                self.path_to_app,
+            ]
+        )
 
 
 class Patcher(object):
@@ -307,7 +391,6 @@ class Patcher(object):
         self._patcher = self.patch_strategies[self.app_ext.lstrip(".")](
             path_to_app=path_to_app,
             sdk_data=sdk_data,
-            framework_in_app=self.framework_in_app,
             signing_certificate_name=signing_certificate_name,
             provisioning_profile=provisioning_profile,
         )
