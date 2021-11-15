@@ -2,12 +2,12 @@ import os
 import plistlib
 import shutil
 import subprocess
+import sys
 import tempfile
+import zipfile
 from argparse import ArgumentParser
 from enum import Enum
 from io import BytesIO
-import zipfile
-import sys
 from urllib.request import urlopen
 
 __version__ = "0.1.0"
@@ -55,6 +55,7 @@ def print_verbose(*args, **kwargs):
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
+    # type: (str, str, bool, Optional[bool]) -> None
     for item in os.listdir(src):
         if item in FILES_SKIP_LIST:
             continue
@@ -67,6 +68,7 @@ def copytree(src, dst, symlinks=False, ignore=None):
 
 
 def yes_no(answer):
+    # type: (str) -> bool
     yes = {"yes", "y", "ye", ""}
     no = {"no", "n"}
 
@@ -87,6 +89,7 @@ class SdkParams(Enum):
 
 class SdkData(object):
     def __init__(self, name, download_url):
+        # type: (str, str) -> None
         self.name = name
         self.download_url = download_url
         self.sdk_location = None
@@ -127,6 +130,7 @@ class SdkDownloadManager(object):
 
     @classmethod
     def from_sdk_name(cls, sdk_name, force_update):
+        # type: (str, bool) -> SdkDownloadManager
         sdk = SdkParams(sdk_name)
         sdk_data = SUPPORTED_FRAMEWORKS[sdk]
         return cls(sdk_data, force_update)
@@ -140,7 +144,9 @@ class SdkDownloadManager(object):
                     self.sdk_data.name, self.sdk_data.sdk_location
                 )
             )
-            if yes_no("Continue with this version of `{}`?".format(self.sdk_data.name)):
+            if yes_no(
+                "* Continue with saved version of `{}`?".format(self.sdk_data.name)
+            ):
                 return self.sdk_data
 
         print(
@@ -259,6 +265,7 @@ class _PatcherStrategy(object):
     def __init__(
         self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
     ):
+        # type: (str, SdkData, str, str) -> None
         self.path_to_app = path_to_app
         self.sdk_data = sdk_data
         self.signing_certificate_name = signing_certificate_name
@@ -266,6 +273,7 @@ class _PatcherStrategy(object):
 
     @property
     def sdk_in_app_framework(self):
+        # type: () -> str
         raise NotImplemented
 
     def patch(self):
@@ -298,6 +306,7 @@ class IpaPatcher(_PatcherStrategy):
 
     @property
     def app_in_payload(self):
+        # type: () -> str
         if self._app_in_payload is None:
             payload_in_app = os.path.join(self.extracted_dir_path, "Payload")
             apps_in_payolad = os.listdir(payload_in_app)
@@ -308,6 +317,7 @@ class IpaPatcher(_PatcherStrategy):
 
     @property
     def sdk_in_app_framework(self):
+        # type: () -> str
         return os.path.join(self.app_in_payload, "Frameworks", self.sdk_data.name)
 
     def patch(self):
@@ -325,6 +335,7 @@ class IpaPatcher(_PatcherStrategy):
             plistlib.dump(ent, f)
 
     def __find_files_to_sign(self):
+        # type: () -> list[str]
         to_sign_files = []
         for root, dirs, files in os.walk(self.extracted_dir_path):
             for name in files:
@@ -334,6 +345,7 @@ class IpaPatcher(_PatcherStrategy):
         return to_sign_files
 
     def __sign_files(self, to_sign_files):
+        # type: (list[str]) -> None
         for to_sign in to_sign_files:
             subprocess.check_call(
                 [
@@ -353,7 +365,9 @@ class IpaPatcher(_PatcherStrategy):
             self.app_in_payload, "embedded.mobileprovision"
         )
         shutil.copy2(self.provisioning_profile, profile_in_app_path)
-        print("Resigning with certificate: {}".format(self.signing_certificate_name))
+        print_verbose(
+            "Resigning with certificate: {}".format(self.signing_certificate_name)
+        )
         to_sign_files = self.__find_files_to_sign()
         self.__extract_entitlements(profile_in_app_path)
         self.__sign_files(to_sign_files)
@@ -396,6 +410,7 @@ class Patcher(object):
         )
 
     def was_already_patched(self):
+        # type: () -> bool
         if os.path.exists(self._patcher.sdk_in_app_framework):
             return True
         else:
@@ -403,7 +418,7 @@ class Patcher(object):
 
     def patch(self):
         if self.was_already_patched():
-            if yes_no("App already patched. Re-patch?"):
+            if yes_no("* App already patched. Re-patch?"):
                 # remove old installation
                 shutil.rmtree(self._patcher.sdk_in_app_framework)
             else:
@@ -416,7 +431,7 @@ class Patcher(object):
             )
         )
         print(
-            "{} is ready for use with the {}".format(
+            "`{}` is ready for use with the `{}`".format(
                 self.path_to_app, self.sdk_data.name
             )
         )
