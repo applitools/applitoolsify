@@ -254,20 +254,28 @@ def cli_parser():
 
 class _PatcherStrategy(object):
     def __init__(
-        self, sdk_data, framework_in_app, signing_certificate_name, provisioning_profile
+        self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
     ):
+        self.path_to_app = path_to_app
         self.sdk_data = sdk_data
-        self.framework_in_app = framework_in_app
         self.signing_certificate_name = signing_certificate_name
         self.provisioning_profile = provisioning_profile
 
-    def __call__(self):
+    @property
+    def sdk_in_app_framework(self):
+        raise NotImplemented
+
+    def patch(self):
         raise NotImplemented
 
 
 class AppPatcher(_PatcherStrategy):
-    def __call__(self):
-        copytree(self.sdk_data.sdk_location, self.framework_in_app)
+    @property
+    def sdk_in_app_framework(self):
+        return os.path.join(self.path_to_app, "Frameworks", self.sdk_data.name)
+
+    def patch(self):
+        copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
 
 
 class IpaPatcher(_PatcherStrategy):
@@ -295,9 +303,9 @@ class Patcher(object):
         self.path_to_app = path_to_app
         self.app_name = os.path.basename(path_to_app)
         _, self.app_ext = os.path.splitext(path_to_app)
-        self.framework_in_app = os.path.join(path_to_app, "Frameworks", sdk_data.name)
         self.sdk_data = sdk_data
-        self._patch = self.patch_strategies[self.app_ext.lstrip(".")](
+        self._patcher = self.patch_strategies[self.app_ext.lstrip(".")](
+            path_to_app=path_to_app,
             sdk_data=sdk_data,
             framework_in_app=self.framework_in_app,
             signing_certificate_name=signing_certificate_name,
@@ -305,7 +313,7 @@ class Patcher(object):
         )
 
     def was_already_patched(self):
-        if os.path.exists(self.framework_in_app):
+        if os.path.exists(self._patcher.sdk_in_app_framework):
             return True
         else:
             return False
@@ -314,14 +322,14 @@ class Patcher(object):
         if self.was_already_patched():
             if yes_no("App already patched. Re-patch?"):
                 # remove old installation
-                shutil.rmtree(self.framework_in_app)
+                shutil.rmtree(self._patcher.sdk_in_app_framework)
             else:
                 print("Skip patching")
                 return
-        self._patch()
+        self._patcher.patch()
         print_verbose(
             "`{}` framework was added to `{}`".format(
-                self.sdk_data.name, self.framework_in_app
+                self.sdk_data.name, self._patcher.sdk_in_app_framework
             )
         )
         print(
