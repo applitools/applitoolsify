@@ -26,6 +26,23 @@ def validate_path_to_app(value):
     return True
 
 
+def validate_ipa_with_certificates(
+    path_to_app, signing_certificate_name, provisioning_profile
+):
+    # type: (str, Optional[str], Optional[str])->bool
+    valid = True
+    if not path_to_app.endswith(".ipa"):
+        # validate only `ipa` apps
+        return True
+    if signing_certificate_name is None:
+        print("No signing certificate. {} will not be signed.".format(path_to_app))
+        valid = False
+    if provisioning_profile is None:
+        print("No provisioning certificate. {} will not be signed.".format(path_to_app))
+        valid = False
+    return valid
+
+
 def print_verbose(*args, **kwargs):
     if VERBOSE:
         print(*args, **kwargs)
@@ -315,6 +332,10 @@ def run():
     args = cli_parser().parse_args()
 
     if not validate_path_to_app(args.path_to_app):
+        return
+    if not validate_ipa_with_certificates(
+        args.path_to_app, args.signing_certificate_name, args.provisioning_profile
+    ):
         return
 
     if args.verbose:
