@@ -40,6 +40,9 @@ def validate_ipa_with_certificates(
     if provisioning_profile is None:
         print("No provisioning certificate. {} will not be signed.".format(path_to_app))
         valid = False
+    if sys.platform != "darwin":
+        print("Not supported platform. Signing supported only on macOS")
+        valid = False
     return valid
 
 
