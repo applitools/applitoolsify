@@ -12,7 +12,7 @@ from urllib.request import urlopen
 
 __version__ = "0.1.0"
 
-FILES_SKIP_LIST = [".DS_Store"]
+FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
 
 
@@ -59,7 +59,7 @@ def print_verbose(*args, **kwargs):
 def copytree(src, dst, symlinks=False, ignore=None):
     # type: (str, str, bool, bool|None) -> None
     for item in os.listdir(src):
-        if item in FILES_SKIP_LIST:
+        if item in FILES_COPY_SKIP_LIST:
             continue
         s = os.path.join(src, item)
         d = os.path.join(dst, item)
@@ -248,6 +248,7 @@ class IOSAppPatcherStrategy(_PatcherStrategy):
 
     @property
     def sdk_in_app_framework(self):
+        # type: () -> str
         return os.path.join(self.path_to_app, "Frameworks", self.sdk_data.name)
 
     def patch(self):
