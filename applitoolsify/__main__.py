@@ -1,3 +1,3 @@
-from .applitoolsify import run
+from .applitoolsify import main
 
-run()
+main()

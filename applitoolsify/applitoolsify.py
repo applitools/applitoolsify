@@ -19,11 +19,11 @@ VERBOSE = False
 def validate_path_to_app(value):
     # type: (str)->bool
     if not os.path.exists(value):
-        print("Path `{}` does not exist".format(value))
+        print("! Path `{}` does not exist".format(value))
         return False
     if not value.endswith(".app") and not value.endswith(".ipa"):
         print(
-            "Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
+            "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
         )
         return False
     return True
@@ -32,19 +32,21 @@ def validate_path_to_app(value):
 def validate_ipa_with_certificates(
     path_to_app, signing_certificate_name, provisioning_profile
 ):
-    # type: (str, Optional[str], Optional[str])->bool
+    # type: (str, str|None, str|None)->bool
     valid = True
     if not path_to_app.endswith(".ipa"):
         # validate only `ipa` apps
         return True
     if signing_certificate_name is None:
-        print("No signing certificate. {} will not be signed.".format(path_to_app))
+        print("! No signing certificate. {} will not be signed.".format(path_to_app))
         valid = False
     if provisioning_profile is None:
-        print("No provisioning certificate. {} will not be signed.".format(path_to_app))
+        print(
+            "! No provisioning certificate. {} will not be signed.".format(path_to_app)
+        )
         valid = False
     if sys.platform != "darwin":
-        print("Not supported platform. Signing supported only on macOS")
+        print("! Not supported platform. Signing supported only on macOS")
         valid = False
     return valid
 
@@ -55,7 +57,7 @@ def print_verbose(*args, **kwargs):
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
-    # type: (str, str, bool, Optional[bool]) -> None
+    # type: (str, str, bool, bool|None) -> None
     for item in os.listdir(src):
         if item in FILES_SKIP_LIST:
             continue
@@ -79,7 +81,7 @@ def yes_no(answer):
         elif choice in no:
             return False
         else:
-            print("Please respond with 'yes' or 'no'")
+            print("! Please respond with 'yes' or 'no'")
 
 
 class SdkParams(Enum):
@@ -88,6 +90,8 @@ class SdkParams(Enum):
 
 
 class SdkData(object):
+    """DTO with SDK data to download and extract"""
+
     def __init__(self, name, download_url):
         # type: (str, str) -> None
         self.name = name
@@ -120,6 +124,8 @@ SUPPORTED_FRAMEWORKS = {
 
 
 class SdkDownloadManager(object):
+    """Download and extract selected SDK"""
+
     def __init__(self, sdk_data, force_update):
         # type: (SdkData, bool) -> None
         self.force_update = force_update
@@ -216,52 +222,9 @@ class SdkDownloadManager(object):
         return target_dir
 
 
-def cli_parser():
-    parser = ArgumentParser(
-        prog="python -m applitoolsify",
-        description="Applitoolsify the app with UFG_lib or EyesiOSHelper SDK.",
-    )
-    # options
-    parser.add_argument(
-        "-V",
-        "--version",
-        action="version",
-        version="%(prog)s {}".format(__version__),
-        help="Version of the app",
-    )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
-    parser.add_argument(
-        "-f", "--force-update", action="store_true", help="Force update framework"
-    )
-
-    # main params
-    parser.add_argument(
-        "path_to_app",
-        type=str,
-        help="Path to the `.app` or `.ipa` for applitoolsify",
-    )
-    parser.add_argument(
-        "sdk",
-        choices=[e.value for e in SdkParams],
-        help="Select SDK for applitoolsify",
-    )
-
-    # optional signing
-    parser.add_argument(
-        "signing_certificate_name",
-        nargs="?",
-        help="Name of the Certificate to be Used",
-    )
-    parser.add_argument(
-        "provisioning_profile",
-        nargs="?",
-        help="Provisioning Profile to be Used",
-    )
-    parser.set_defaults(command=lambda _: parser.print_help())
-    return parser
-
-
 class _PatcherStrategy(object):
+    """Base Patch Strategy class. Helps to patch app with specific SDK."""
+
     def __init__(
         self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
     ):
@@ -280,7 +243,9 @@ class _PatcherStrategy(object):
         raise NotImplemented
 
 
-class AppPatcher(_PatcherStrategy):
+class IOSAppPatcherStrategy(_PatcherStrategy):
+    """Patch IOS `app` with specific SDK"""
+
     @property
     def sdk_in_app_framework(self):
         return os.path.join(self.path_to_app, "Frameworks", self.sdk_data.name)
@@ -289,13 +254,15 @@ class AppPatcher(_PatcherStrategy):
         copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
 
 
-class IpaPatcher(_PatcherStrategy):
+class IOSIpaPatcherStrategy(_PatcherStrategy):
+    """Patch IOS `ipa` with specific SDK and sign with a specified certificate"""
+
     SECURITY = "/usr/bin/security"
     CODESIGN = "/usr/bin/codesign"
     DITTO = "/usr/bin/ditto"
 
     def __init__(self, *args, **kwargs):
-        super(IpaPatcher, self).__init__(*args, **kwargs)
+        super(IOSIpaPatcherStrategy, self).__init__(*args, **kwargs)
 
         self.tmp_dir = tempfile.mkdtemp()
         self.extracted_dir_path = os.path.join(self.tmp_dir, "extracted")
@@ -388,7 +355,9 @@ class IpaPatcher(_PatcherStrategy):
 
 
 class Patcher(object):
-    patch_strategies = {"app": AppPatcher, "ipa": IpaPatcher}
+    """Allow to patch specific application with Applitools SDK"""
+
+    patch_strategies = {"app": IOSAppPatcherStrategy, "ipa": IOSIpaPatcherStrategy}
 
     def __init__(
         self,
@@ -437,7 +406,52 @@ class Patcher(object):
         )
 
 
-def run():
+def cli_parser():
+    parser = ArgumentParser(
+        prog="python -m applitoolsify",
+        description="Applitoolsify the app with UFG_lib or EyesiOSHelper SDK.",
+    )
+    # options
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version="%(prog)s {}".format(__version__),
+        help="Version of the app",
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
+    parser.add_argument(
+        "-f", "--force-update", action="store_true", help="Force update framework"
+    )
+
+    # main params
+    parser.add_argument(
+        "path_to_app",
+        type=str,
+        help="Path to the `.app` or `.ipa` for applitoolsify",
+    )
+    parser.add_argument(
+        "sdk",
+        choices=[e.value for e in SdkParams],
+        help="Select SDK for applitoolsify",
+    )
+
+    # optional signing
+    parser.add_argument(
+        "signing_certificate_name",
+        nargs="?",
+        help="Name of the Certificate to be Used",
+    )
+    parser.add_argument(
+        "provisioning_profile",
+        nargs="?",
+        help="Provisioning Profile to be Used",
+    )
+    parser.set_defaults(command=lambda _: parser.print_help())
+    return parser
+
+
+def main():
     args = cli_parser().parse_args()
 
     if not validate_path_to_app(args.path_to_app):
@@ -465,4 +479,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    main()
