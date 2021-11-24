@@ -30,28 +30,6 @@ def validate_path_to_app(value):
     return True
 
 
-def validate_ipa_with_certificates(
-    path_to_app, signing_certificate_name, provisioning_profile
-):
-    # type: (str, str|None, str|None)->bool
-    valid = True
-    if not path_to_app.endswith(".ipa"):
-        # validate only `ipa` apps
-        return True
-    if signing_certificate_name is None:
-        print("! No signing certificate. {} will not be signed.".format(path_to_app))
-        valid = False
-    if provisioning_profile is None:
-        print(
-            "! No provisioning certificate. {} will not be signed.".format(path_to_app)
-        )
-        valid = False
-    if sys.platform != "darwin":
-        print("! Not supported platform. Signing supported only on macOS")
-        valid = False
-    return valid
-
-
 def print_verbose(*args, **kwargs):
     if VERBOSE:
         print(*args, **kwargs)
@@ -270,7 +248,13 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
 
     def instrumentify(self):
         copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
-        self._resign()
+        try:
+            self._resign()
+        except Exception as err:
+            print("Failed to sign. Please, sign it manually")
+            if VERBOSE:
+                import traceback
+                traceback.print_exception(type(err), err, err.__traceback__)
         self._repackage()
 
     def __extract_entitlements(self, profile_in_app_path):
@@ -309,6 +293,14 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
             )
 
     def _resign(self):
+        if not all([self.signing_certificate_name, self.provisioning_profile]):
+            print_verbose(
+                "No `signing_certificate_name` and `provisioning_profile` provided. Skip signing..."
+            )
+            return
+        if sys.platform != "darwin":
+            print("Signing is available only on macOS. Skip signing...")
+            return
         profile_in_app_path = os.path.join(
             self.app_in_payload, "embedded.mobileprovision"
         )
@@ -338,7 +330,10 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
 class Instrumenter(object):
     """Allow to instrumentify specific application with Applitools SDK"""
 
-    instrument_strategies = {"app": IOSAppPatcherInstrumentifyStrategy, "ipa": IOSIpaInstrumentifyStrategy}
+    instrument_strategies = {
+        "app": IOSAppPatcherInstrumentifyStrategy,
+        "ipa": IOSIpaInstrumentifyStrategy,
+    }
 
     def __init__(
         self,
@@ -431,18 +426,12 @@ def main():
 
     if not validate_path_to_app(args.path_to_app):
         return
-    # if not validate_ipa_with_certificates(
-    #     args.path_to_app, args.signing_certificate_name, args.provisioning_profile
-    # ):
-    #     return
 
     if args.verbose:
         global VERBOSE
         VERBOSE = True
 
-    sdk_data = SdkDownloadManager.from_sdk_name(
-        args.sdk
-    ).download_and_extract()
+    sdk_data = SdkDownloadManager.from_sdk_name(args.sdk).download_and_extract()
 
     instrumenter = Instrumenter(
         args.path_to_app,
