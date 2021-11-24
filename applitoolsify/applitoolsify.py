@@ -94,7 +94,7 @@ class SdkDownloadManager(object):
         # type: (SdkData) -> None
         self.sdk_data = sdk_data
         # TODO: change it to tmp?
-        self.sdks_dir = os.path.join(sys.path[0], "APPLITOOLS_SDKS")
+        self.sdks_dir = sys.path[0]  # curr dir
         self.sdk_data.add_sdk_location(os.path.join(self.sdks_dir, self.sdk_data.name))
 
     @classmethod
@@ -103,6 +103,16 @@ class SdkDownloadManager(object):
         sdk = SdkParams(sdk_name)
         sdk_data = SUPPORTED_FRAMEWORKS[sdk]
         return cls(sdk_data)
+
+    def __enter__(self):
+        # type: () -> SdkData
+        return self.download_and_extract()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.remove_sdk_data()
+
+    def remove_sdk_data(self):
+        shutil.rmtree(self.sdk_data.sdk_location)
 
     def download_and_extract(self):
         # type: () -> SdkData
@@ -299,7 +309,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
             )
             return
         if sys.platform != "darwin":
-            print("Signing is available only on macOS. Skip signing...")
+            print("Signing with script is available only on macOS. Skip signing...")
             return
         profile_in_app_path = os.path.join(
             self.app_in_payload, "embedded.mobileprovision"
@@ -431,15 +441,14 @@ def main():
         global VERBOSE
         VERBOSE = True
 
-    sdk_data = SdkDownloadManager.from_sdk_name(args.sdk).download_and_extract()
-
-    instrumenter = Instrumenter(
-        args.path_to_app,
-        sdk_data,
-        args.signing_certificate_name,
-        args.provisioning_profile,
-    )
-    instrumenter.instrumentify()
+    with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
+        instrumenter = Instrumenter(
+            args.path_to_app,
+            sdk_data,
+            args.signing_certificate_name,
+            args.provisioning_profile,
+        )
+        instrumenter.instrumentify()
 
 
 if __name__ == "__main__":
