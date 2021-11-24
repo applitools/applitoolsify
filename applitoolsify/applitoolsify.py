@@ -281,8 +281,12 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         for root, dirs, files in os.walk(self.extracted_dir_path):
             for name in files:
                 _, ext = os.path.splitext(name)
-                if ext.lstrip(".").lower() in ["app", "appex", "framework", "dylib"]:
-                    to_sign_files.append(name)
+                if ext.lstrip(".").lower() in ["dylib"]:
+                    to_sign_files.append(os.path.join(root, name))
+            for dir_name in dirs:
+                _, ext = os.path.splitext(dir_name)
+                if ext.lstrip(".").lower() in ["app", "appex", "framework"]:
+                    to_sign_files.append(os.path.join(root, dir_name))
         return to_sign_files
 
     def __sign_files(self, to_sign_files):
