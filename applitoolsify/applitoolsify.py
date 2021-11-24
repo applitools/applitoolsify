@@ -228,7 +228,6 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
 
     SECURITY = "/usr/bin/security"
     CODESIGN = "/usr/bin/codesign"
-    DITTO = "/usr/bin/ditto"
 
     def __init__(self, *args, **kwargs):
         super(IOSIpaInstrumentifyStrategy, self).__init__(*args, **kwargs)
@@ -248,7 +247,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
             apps_in_payolad = os.listdir(payload_in_app)
             if len(apps_in_payolad) > 1:
                 raise RuntimeError("Payload contains more then one app")
-            self._app_in_payload = apps_in_payolad[0]
+            self._app_in_payload = os.path.join(payload_in_app, apps_in_payolad[0])
         return self._app_in_payload
 
     @property
@@ -324,17 +323,21 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         self._repackage()
 
     def _repackage(self):
-        subprocess.check_call(
-            [
-                self.DITTO,
-                "-c",
-                "-k",
-                "--sequesterRsrc",
-                "--keepParent",
-                os.path.join(self.extracted_dir_path, "Payload"),
-                self.path_to_app,
-            ]
-        )
+        zip_dir(os.path.join(self.extracted_dir_path, "Payload"), self.path_to_app)
+
+
+def zip_dir(dirpath, zippath):
+    with zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED) as zfile:
+        basedir = os.path.dirname(dirpath) + '/'
+        for root, dirs, files in os.walk(dirpath):
+            if os.path.basename(root)[0] == '.':
+                continue #skip hidden directories
+            dirname = root.replace(basedir, '')
+            for f in files:
+                if f[-1] == '~' or (f[0] == '.' and f != '.htaccess'):
+                    #skip backup files and all hidden files except .htaccess
+                    continue
+                zfile.write(os.path.join(root, f), os.path.join(dirname, f))
 
 
 class Instrumenter(object):
