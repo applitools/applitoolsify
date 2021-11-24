@@ -70,21 +70,6 @@ def copytree(src, dst, symlinks=False, ignore=None):
             shutil.copy2(s, d)
 
 
-def yes_no(answer):
-    # type: (str) -> bool
-    yes = {"yes", "y", "ye", ""}
-    no = {"no", "n"}
-
-    while True:
-        choice = input(answer + "(y/n)\n").lower()
-        if choice in yes:
-            return True
-        elif choice in no:
-            return False
-        else:
-            print("! Please respond with 'yes' or 'no'")
-
-
 class SdkParams(Enum):
     ios_classic = "ios_classic"
     ios_ufg = "ios_ufg"
@@ -127,41 +112,35 @@ SUPPORTED_FRAMEWORKS = {
 class SdkDownloadManager(object):
     """Download and extract selected SDK"""
 
-    def __init__(self, sdk_data, force_update):
-        # type: (SdkData, bool) -> None
-        self.force_update = force_update
+    def __init__(self, sdk_data):
+        # type: (SdkData) -> None
         self.sdk_data = sdk_data
         # TODO: change it to tmp?
         self.sdks_dir = os.path.join(sys.path[0], "APPLITOOLS_SDKS")
         self.sdk_data.add_sdk_location(os.path.join(self.sdks_dir, self.sdk_data.name))
 
     @classmethod
-    def from_sdk_name(cls, sdk_name, force_update):
-        # type: (str, bool) -> SdkDownloadManager
+    def from_sdk_name(cls, sdk_name):
+        # type: (str) -> SdkDownloadManager
         sdk = SdkParams(sdk_name)
         sdk_data = SUPPORTED_FRAMEWORKS[sdk]
-        return cls(sdk_data, force_update)
+        return cls(sdk_data)
 
     def download_and_extract(self):
         # type: () -> SdkData
-        if not self.force_update and os.path.exists(self.sdk_data.sdk_location):
-            # return sdk data if already downloaded
-            print(
+        if os.path.exists(self.sdk_data.sdk_location):
+            print_verbose(
                 "We've detected saved version of `{}` in `{}`".format(
                     self.sdk_data.name, self.sdk_data.sdk_location
                 )
             )
-            if yes_no(
-                "* Continue with saved version of `{}`?".format(self.sdk_data.name)
-            ):
-                return self.sdk_data
 
-        print(
+        print_verbose(
             "Downloading `{}` to `{}`".format(
                 self.sdk_data.name, self.sdk_data.sdk_location
             )
         )
-        # download sdk if not present or `force_update` called
+        # always download latest sdk
         with urlopen(self.sdk_data.download_url) as zipresp:
             with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
                 extracted_path = self._extract_specific_folder(
@@ -223,8 +202,8 @@ class SdkDownloadManager(object):
         return target_dir
 
 
-class _PatcherStrategy(object):
-    """Base Patch Strategy class. Helps to patch app with specific SDK."""
+class _InstrumentifyStrategy(object):
+    """Base Patch Strategy class. Helps to instrumentify app with specific SDK."""
 
     def __init__(
         self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
@@ -240,11 +219,11 @@ class _PatcherStrategy(object):
         # type: () -> str
         raise NotImplemented
 
-    def patch(self):
+    def instrumentify(self):
         raise NotImplemented
 
 
-class IOSAppPatcherStrategy(_PatcherStrategy):
+class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
 
     @property
@@ -252,11 +231,11 @@ class IOSAppPatcherStrategy(_PatcherStrategy):
         # type: () -> str
         return os.path.join(self.path_to_app, "Frameworks", self.sdk_data.name)
 
-    def patch(self):
+    def instrumentify(self):
         copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
 
 
-class IOSIpaPatcherStrategy(_PatcherStrategy):
+class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `ipa` with specific SDK and sign with a specified certificate"""
 
     SECURITY = "/usr/bin/security"
@@ -264,7 +243,7 @@ class IOSIpaPatcherStrategy(_PatcherStrategy):
     DITTO = "/usr/bin/ditto"
 
     def __init__(self, *args, **kwargs):
-        super(IOSIpaPatcherStrategy, self).__init__(*args, **kwargs)
+        super(IOSIpaInstrumentifyStrategy, self).__init__(*args, **kwargs)
 
         self.tmp_dir = tempfile.mkdtemp()
         self.extracted_dir_path = os.path.join(self.tmp_dir, "extracted")
@@ -289,7 +268,7 @@ class IOSIpaPatcherStrategy(_PatcherStrategy):
         # type: () -> str
         return os.path.join(self.app_in_payload, "Frameworks", self.sdk_data.name)
 
-    def patch(self):
+    def instrumentify(self):
         copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
         self._resign()
         self._repackage()
@@ -356,10 +335,10 @@ class IOSIpaPatcherStrategy(_PatcherStrategy):
         )
 
 
-class Patcher(object):
-    """Allow to patch specific application with Applitools SDK"""
+class Instrumenter(object):
+    """Allow to instrumentify specific application with Applitools SDK"""
 
-    patch_strategies = {"app": IOSAppPatcherStrategy, "ipa": IOSIpaPatcherStrategy}
+    instrument_strategies = {"app": IOSAppPatcherInstrumentifyStrategy, "ipa": IOSIpaInstrumentifyStrategy}
 
     def __init__(
         self,
@@ -373,32 +352,29 @@ class Patcher(object):
         self.app_name = os.path.basename(path_to_app)
         _, self.app_ext = os.path.splitext(path_to_app)
         self.sdk_data = sdk_data
-        self._patcher = self.patch_strategies[self.app_ext.lstrip(".")](
+        self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
             path_to_app=path_to_app,
             sdk_data=sdk_data,
             signing_certificate_name=signing_certificate_name,
             provisioning_profile=provisioning_profile,
         )
 
-    def was_already_patched(self):
+    def was_already_instrumented(self):
         # type: () -> bool
-        if os.path.exists(self._patcher.sdk_in_app_framework):
+        if os.path.exists(self._instrumenter.sdk_in_app_framework):
             return True
         else:
             return False
 
-    def patch(self):
-        if self.was_already_patched():
-            if yes_no("* App already patched. Re-patch?"):
-                # remove old installation
-                shutil.rmtree(self._patcher.sdk_in_app_framework)
-            else:
-                print("Skip patching")
-                return
-        self._patcher.patch()
+    def instrumentify(self):
+        if self.was_already_instrumented():
+            print_verbose("App already instrumented. Updating...")
+            # remove old installation
+            shutil.rmtree(self._instrumenter.sdk_in_app_framework)
+        self._instrumenter.instrumentify()
         print_verbose(
             "`{}` framework was added to `{}`".format(
-                self.sdk_data.name, self._patcher.sdk_in_app_framework
+                self.sdk_data.name, self._instrumenter.sdk_in_app_framework
             )
         )
         print(
@@ -422,9 +398,6 @@ def cli_parser():
         help="Version of the app",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
-    parser.add_argument(
-        "-f", "--force-update", action="store_true", help="Force update framework"
-    )
 
     # main params
     parser.add_argument(
@@ -458,26 +431,26 @@ def main():
 
     if not validate_path_to_app(args.path_to_app):
         return
-    if not validate_ipa_with_certificates(
-        args.path_to_app, args.signing_certificate_name, args.provisioning_profile
-    ):
-        return
+    # if not validate_ipa_with_certificates(
+    #     args.path_to_app, args.signing_certificate_name, args.provisioning_profile
+    # ):
+    #     return
 
     if args.verbose:
         global VERBOSE
         VERBOSE = True
 
     sdk_data = SdkDownloadManager.from_sdk_name(
-        args.sdk, args.force_update
+        args.sdk
     ).download_and_extract()
 
-    patcher = Patcher(
+    instrumenter = Instrumenter(
         args.path_to_app,
         sdk_data,
         args.signing_certificate_name,
         args.provisioning_profile,
     )
-    patcher.patch()
+    instrumenter.instrumentify()
 
 
 if __name__ == "__main__":
