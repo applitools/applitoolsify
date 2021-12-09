@@ -1,4 +1,5 @@
 from __future__ import print_function, unicode_literals
+
 import os
 import plistlib
 import shutil
@@ -6,28 +7,18 @@ import subprocess
 import sys
 import tempfile
 import zipfile
-from argparse import ArgumentParser
 from enum import Enum
 from io import BytesIO
-from urllib.request import urlopen
+
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 
 __version__ = "0.1.0"
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
-
-
-def validate_path_to_app(value):
-    # type: (str)->bool
-    if not os.path.exists(value):
-        print("! Path `{}` does not exist".format(value))
-        return False
-    if not value.endswith(".app") and not value.endswith(".ipa"):
-        print(
-            "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
-        )
-        return False
-    return True
 
 
 def print_verbose(*args, **kwargs):
@@ -263,6 +254,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
             print("Failed to sign. Please, sign it manually")
             if VERBOSE:
                 import traceback
+
                 traceback.print_exception(type(err), err, err.__traceback__)
         self._repackage()
 
@@ -331,15 +323,15 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
 
 
 def zip_dir(dirpath, zippath):
-    with zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED) as zfile:
-        basedir = os.path.dirname(dirpath) + '/'
+    with zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED) as zfile:
+        basedir = os.path.dirname(dirpath) + "/"
         for root, dirs, files in os.walk(dirpath):
-            if os.path.basename(root)[0] == '.':
-                continue #skip hidden directories
-            dirname = root.replace(basedir, '')
+            if os.path.basename(root)[0] == ".":
+                continue  # skip hidden directories
+            dirname = root.replace(basedir, "")
             for f in files:
-                if f[-1] == '~' or (f[0] == '.' and f != '.htaccess'):
-                    #skip backup files and all hidden files except .htaccess
+                if f[-1] == "~" or (f[0] == "." and f != ".htaccess"):
+                    # skip backup files and all hidden files except .htaccess
                     continue
                 zfile.write(os.path.join(root, f), os.path.join(dirname, f))
 
@@ -394,69 +386,3 @@ class Instrumenter(object):
                 self.path_to_app, self.sdk_data.name
             )
         )
-
-
-def cli_parser():
-    parser = ArgumentParser(
-        prog="python -m applitoolsify",
-        description="Applitoolsify the app with UFG_lib or EyesiOSHelper SDK.",
-    )
-    # options
-    parser.add_argument(
-        "-V",
-        "--version",
-        action="version",
-        version="%(prog)s {}".format(__version__),
-        help="Version of the app",
-    )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
-
-    # main params
-    parser.add_argument(
-        "path_to_app",
-        type=str,
-        help="Path to the `.app` or `.ipa` for applitoolsify",
-    )
-    parser.add_argument(
-        "sdk",
-        choices=[e.value for e in SdkParams],
-        help="Select SDK for applitoolsify",
-    )
-
-    # optional signing
-    parser.add_argument(
-        "signing_certificate_name",
-        nargs="?",
-        help="Name of the Certificate to be Used",
-    )
-    parser.add_argument(
-        "provisioning_profile",
-        nargs="?",
-        help="Provisioning Profile to be Used",
-    )
-    parser.set_defaults(command=lambda _: parser.print_help())
-    return parser
-
-
-def main():
-    args = cli_parser().parse_args()
-
-    if not validate_path_to_app(args.path_to_app):
-        return
-
-    if args.verbose:
-        global VERBOSE
-        VERBOSE = True
-
-    with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
-        instrumenter = Instrumenter(
-            args.path_to_app,
-            sdk_data,
-            args.signing_certificate_name,
-            args.provisioning_profile,
-        )
-        instrumenter.instrumentify()
-
-
-if __name__ == "__main__":
-    main()
