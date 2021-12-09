@@ -5,22 +5,11 @@ import sys
 import time
 from contextlib import contextmanager
 
-PY2 = True if sys.version_info[0] == 2 else False
+try:
+    from urllib.request import urlretrieve
+except ImportError:
+    from urllib import urlretrieve
 
-if PY2:
-    from contextlib import contextmanager
-
-    from urllib2 import urlopen as _urlopen
-
-    @contextmanager
-    def urlopen(*args, **kwargs):
-        resp = _urlopen(*args, **kwargs)
-        yield resp
-        resp.close()
-
-
-else:
-    from urllib.request import urlopen
 
 __version__ = "0.1.0"
 
@@ -39,12 +28,7 @@ def _run_from_remote():
     instrument_path = os.path.join(cur_dir, "{}.py".format(instrument_module))
     try:
         # download and save into current folder instrumented module
-        with urlopen(instrumented_url) as resp:
-            if resp.code != 200:
-                print("! Failed to download script")
-                sys.exit(1)
-            with open(instrument_path, "wb") as f:
-                f.write(resp.read())
+        urlretrieve(instrumented_url, instrument_path)
 
         # import downloaded module
         from importlib import import_module
