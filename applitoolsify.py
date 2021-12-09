@@ -4,10 +4,22 @@ import sys
 import time
 from contextlib import contextmanager
 
-try:
+PY2 = True if sys.version_info[0] == 2 else False
+
+if PY2:
+    from contextlib import contextmanager
+
+    from urllib2 import urlopen as _urlopen
+
+    @contextmanager
+    def urlopen(*args, **kwargs):
+        resp = _urlopen(*args, **kwargs)
+        yield resp
+        resp.close()
+
+
+else:
     from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
 
 import os
 
@@ -16,23 +28,28 @@ INSTRUMENTED_URL = (
 )
 
 
-@contextmanager
-def instrumenter():
+def _local_run():
+    from src.instrument import run
+
+    return run
+
+
+def _remote_run():
     instrument_module = "_{}_instrument".format(str(time.time()).split(".")[0])
     cur_dir = sys.path[0]
     instrument_path = os.path.join(cur_dir, "{}.py".format(instrument_module))
     try:
-        resp = urlopen(INSTRUMENTED_URL)
-        if resp.code != 200:
-            print("! Failed to download script")
-            sys.exit(1)
-        with open(instrument_path, "wb") as f:
-            f.write(resp.read())
+        with urlopen(INSTRUMENTED_URL) as resp:
+            if resp.code != 200:
+                print("! Failed to download script")
+                sys.exit(1)
+            with open(instrument_path, "wb") as f:
+                f.write(resp.read())
 
         from importlib import import_module
 
         instrument = import_module(instrument_module)
-        yield getattr(instrument, "run")
+        return getattr(instrument, "run")
     except Exception as err:
         print("! Failed to execute script.")
         import traceback
@@ -43,6 +60,14 @@ def instrumenter():
             os.remove(instrument_path)
         except OSError:
             pass
+
+
+@contextmanager
+def instrumenter(local_run=False):
+    if local_run:
+        yield _local_run()
+    else:
+        yield _remote_run()
 
 
 def main():

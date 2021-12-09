@@ -8,13 +8,24 @@ import sys
 import tempfile
 import zipfile
 from argparse import ArgumentParser
-from enum import Enum
 from io import BytesIO
 
-try:
+PY2 = True if sys.version_info[0] == 2 else False
+
+if PY2:
+    from contextlib import contextmanager
+
+    from urllib2 import urlopen as _urlopen
+
+    @contextmanager
+    def urlopen(*args, **kwargs):
+        resp = _urlopen(*args, **kwargs)
+        yield resp
+        resp.close()
+
+
+else:
     from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
 
 __version__ = "0.1.0"
 
@@ -53,9 +64,23 @@ def copytree(src, dst, symlinks=False, ignore=None):
             shutil.copy2(s, d)
 
 
-class SdkParams(Enum):
+class SdkParams(object):
     ios_classic = "ios_classic"
     ios_ufg = "ios_ufg"
+    values = [ios_ufg, ios_classic]
+
+    def __init__(self, value):
+        # type: (str)->None
+        if value not in self.values:
+            raise ValueError
+        self.value = value
+
+    def __getitem__(self, item):
+        for item in self.items:
+            yield item
+
+    def __hash__(self):
+        return hash(self.value)
 
 
 class SdkData(object):
@@ -92,6 +117,12 @@ SUPPORTED_FRAMEWORKS = {
 }
 
 
+def is_dir_in_zip(fileinfo):
+    # type: (zipfile.ZipInfo) -> bool
+    hi = fileinfo.external_attr >> 16
+    return (hi & 0x4000) > 0
+
+
 class SdkDownloadManager(object):
     """Download and extract selected SDK"""
 
@@ -106,7 +137,7 @@ class SdkDownloadManager(object):
     def from_sdk_name(cls, sdk_name):
         # type: (str) -> SdkDownloadManager
         sdk = SdkParams(sdk_name)
-        sdk_data = SUPPORTED_FRAMEWORKS[sdk]
+        sdk_data = SUPPORTED_FRAMEWORKS[sdk.value]
         return cls(sdk_data)
 
     def __enter__(self):
@@ -154,14 +185,14 @@ class SdkDownloadManager(object):
         if not all(
             True
             for m in zfile.filelist
-            if m.is_dir() and extract_dir_name in m.filename
+            if is_dir_in_zip(m) and extract_dir_name in m.filename
         ):
             raise RuntimeError("`{}` not present in archive")
 
         # find index of searched dir to split in the future
         extract_dir_name_index = -1
         for member in zfile.filelist:
-            if not member.is_dir():
+            if not is_dir_in_zip(member):
                 continue
 
             splitted_path = member.filename.split("/")
@@ -185,7 +216,7 @@ class SdkDownloadManager(object):
             if upperdirs and not os.path.exists(upperdirs):
                 os.makedirs(upperdirs)
 
-            if member.is_dir():
+            if is_dir_in_zip(member):
                 if not os.path.isdir(targetpath):
                     os.mkdir(targetpath)
                 continue
@@ -425,7 +456,7 @@ def cli_parser():
     )
     parser.add_argument(
         "sdk",
-        choices=[e.value for e in SdkParams],
+        choices=SdkParams.values,
         help="Select SDK for applitoolsify",
     )
 
