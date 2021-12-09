@@ -6,6 +6,9 @@ import sys
 import time
 from contextlib import contextmanager
 
+# stop writ *.pyc files to prevent from caching
+sys.dont_write_bytecode = True
+
 try:
     from urllib.request import urlretrieve
 except ImportError:
@@ -43,7 +46,7 @@ def _run_from_remote():
         traceback.print_exc()
     finally:
         # remove *.py and *.pyc files
-        for path in [instrument_path, instrument_path+"c"]:
+        for path in [instrument_path, instrument_path + "c"]:
             try:
                 os.remove(path)
             except OSError:
