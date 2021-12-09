@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from argparse import ArgumentParser
 from enum import Enum
 from io import BytesIO
 
@@ -19,6 +20,19 @@ __version__ = "0.1.0"
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
+
+
+def validate_path_to_app(value):
+    # type: (str)->bool
+    if not os.path.exists(value):
+        print("! Path `{}` does not exist".format(value))
+        return False
+    if not value.endswith(".app") and not value.endswith(".ipa"):
+        print(
+            "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
+        )
+        return False
+    return True
 
 
 def print_verbose(*args, **kwargs):
@@ -255,7 +269,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
             if VERBOSE:
                 import traceback
 
-                traceback.print_exception(type(err), err, err.__traceback__)
+                traceback.print_exc()
         self._repackage()
 
     def __extract_entitlements(self, profile_in_app_path):
@@ -386,3 +400,68 @@ class Instrumenter(object):
                 self.path_to_app, self.sdk_data.name
             )
         )
+
+
+def cli_parser():
+    parser = ArgumentParser(
+        prog="python -m applitoolsify",
+        description="Applitoolsify the app with UFG_lib or EyesiOSHelper SDK.",
+    )
+    # options
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version="%(prog)s {}".format(__version__),
+        help="Version of the app",
+    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
+
+    # main params
+    parser.add_argument(
+        "path_to_app",
+        type=str,
+        help="Path to the `.app` or `.ipa` for applitoolsify",
+    )
+    parser.add_argument(
+        "sdk",
+        choices=[e.value for e in SdkParams],
+        help="Select SDK for applitoolsify",
+    )
+
+    # optional signing
+    parser.add_argument(
+        "signing_certificate_name",
+        nargs="?",
+        help="Name of the Certificate to be Used",
+    )
+    parser.add_argument(
+        "provisioning_profile",
+        nargs="?",
+        help="Provisioning Profile to be Used",
+    )
+    parser.set_defaults(command=lambda _: parser.print_help())
+    return parser
+
+
+def run():
+    args = cli_parser().parse_args()
+    if not validate_path_to_app(args.path_to_app):
+        sys.exit(1)
+
+    if args.verbose:
+        global VERBOSE
+        VERBOSE = True
+
+    with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
+        instrumenter = Instrumenter(
+            args.path_to_app,
+            sdk_data,
+            args.signing_certificate_name,
+            args.provisioning_profile,
+        )
+        instrumenter.instrumentify()
+
+
+if __name__ == "__main__":
+    run()
