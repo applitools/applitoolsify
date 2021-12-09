@@ -38,6 +38,7 @@ def _run_from_remote():
     cur_dir = sys.path[0]
     instrument_path = os.path.join(cur_dir, "{}.py".format(instrument_module))
     try:
+        # download and save into current folder instrumented module
         with urlopen(instrumented_url) as resp:
             if resp.code != 200:
                 print("! Failed to download script")
@@ -45,6 +46,7 @@ def _run_from_remote():
             with open(instrument_path, "wb") as f:
                 f.write(resp.read())
 
+        # import downloaded module
         from importlib import import_module
 
         instrument = import_module(instrument_module)
@@ -55,10 +57,12 @@ def _run_from_remote():
 
         traceback.print_exc()
     finally:
-        try:
-            os.remove(instrument_path)
-        except OSError:
-            pass
+        # remove *.py and *.pyc files
+        for path in [instrument_path, instrument_path+"c"]:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 @contextmanager
