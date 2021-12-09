@@ -461,16 +461,16 @@ def cli_parser():
     )
 
     # optional signing
-    parser.add_argument(
-        "signing_certificate_name",
-        nargs="?",
-        help="Name of the Certificate to be Used",
-    )
-    parser.add_argument(
-        "provisioning_profile",
-        nargs="?",
-        help="Provisioning Profile to be Used",
-    )
+    # parser.add_argument(
+    #     "signing_certificate_name",
+    #     nargs="?",
+    #     help="Name of the Certificate to be Used",
+    # )
+    # parser.add_argument(
+    #     "provisioning_profile",
+    #     nargs="?",
+    #     help="Provisioning Profile to be Used",
+    # )
     parser.set_defaults(command=lambda _: parser.print_help())
     return parser
 
@@ -488,8 +488,8 @@ def run():
         instrumenter = Instrumenter(
             args.path_to_app,
             sdk_data,
-            args.signing_certificate_name,
-            args.provisioning_profile,
+            getattr(args, "signing_certificate_name", None),
+            getattr(args, "provisioning_profile", None),
         )
         instrumenter.instrumentify()
 
