@@ -437,7 +437,7 @@ def cli_parser():
     # type: () -> argparse.ArgumentParser
 
     parser = argparse.ArgumentParser(
-        prog="python -m applitoolsify",
+        prog="python applitoolsify.py",
         description="Applitoolsify (v{}) with UFG_lib or EyesiOSHelper SDK.".format(
             __version__
         ),
