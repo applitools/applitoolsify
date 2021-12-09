@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals
 
+import argparse
 import os
 import plistlib
 import shutil
@@ -7,7 +8,6 @@ import subprocess
 import sys
 import tempfile
 import zipfile
-from argparse import ArgumentParser
 from io import BytesIO
 
 PY2 = True if sys.version_info[0] == 2 else False
@@ -434,17 +434,21 @@ class Instrumenter(object):
 
 
 def cli_parser():
-    parser = ArgumentParser(
+    # type: () -> argparse.ArgumentParser
+
+    parser = argparse.ArgumentParser(
         prog="python -m applitoolsify",
-        description="Applitoolsify the app with UFG_lib or EyesiOSHelper SDK.",
+        description="Applitoolsify (v{}) with UFG_lib or EyesiOSHelper SDK.".format(
+            __version__
+        ),
+        add_help=False,
     )
     # options
     parser.add_argument(
-        "-V",
         "--version",
         action="version",
         version="%(prog)s {}".format(__version__),
-        help="Version of the app",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
 
@@ -471,7 +475,9 @@ def cli_parser():
     #     nargs="?",
     #     help="Provisioning Profile to be Used",
     # )
-    parser.set_defaults(command=lambda _: parser.print_help())
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
     return parser
 
 
