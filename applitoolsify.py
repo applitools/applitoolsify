@@ -22,6 +22,8 @@ if PY2:
 else:
     from urllib.request import urlopen
 
+__version__ = "0.1.0"
+
 
 def _run_from_local():
     from src.instrument import run
