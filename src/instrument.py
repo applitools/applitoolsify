@@ -238,10 +238,19 @@ class _InstrumentifyStrategy(object):
         self.signing_certificate_name = signing_certificate_name
         self.provisioning_profile = provisioning_profile
 
+    def _create_dir_if_no_exists(self, path):
+        if not os.path.exists(path):
+            os.mkdir(path)
+        return path
+
     @property
-    def sdk_in_app_framework(self):
+    def app_frameworks(self):
+        return NotImplemented
+
+    @property
+    def sdk_in_app_frameworks(self):
         # type: () -> str
-        raise NotImplemented
+        return os.path.join(self.app_frameworks, self.sdk_data.name)
 
     def instrumentify(self):
         raise NotImplemented
@@ -251,12 +260,13 @@ class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
 
     @property
-    def sdk_in_app_framework(self):
-        # type: () -> str
-        return os.path.join(self.path_to_app, "Frameworks", self.sdk_data.name)
+    def app_frameworks(self):
+        return self._create_dir_if_no_exists(
+            os.path.join(self.path_to_app, "Frameworks")
+        )
 
     def instrumentify(self):
-        copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
+        copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
 
 
 class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -287,12 +297,13 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         return self._app_in_payload
 
     @property
-    def sdk_in_app_framework(self):
-        # type: () -> str
-        return os.path.join(self.app_in_payload, "Frameworks", self.sdk_data.name)
+    def app_frameworks(self):
+        return self._create_dir_if_no_exists(
+            os.path.join(self.app_in_payload, "Frameworks")
+        )
 
     def instrumentify(self):
-        copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
+        copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
         try:
             self._resign()
         except Exception as err:
@@ -410,7 +421,7 @@ class Instrumenter(object):
 
     def was_already_instrumented(self):
         # type: () -> bool
-        if os.path.exists(self._instrumenter.sdk_in_app_framework):
+        if os.path.exists(self._instrumenter.sdk_in_app_frameworks):
             return True
         else:
             return False
@@ -419,11 +430,11 @@ class Instrumenter(object):
         if self.was_already_instrumented():
             print_verbose("App already instrumented. Updating...")
             # remove old installation
-            shutil.rmtree(self._instrumenter.sdk_in_app_framework)
+            shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
         self._instrumenter.instrumentify()
         print_verbose(
             "`{}` framework was added to `{}`".format(
-                self.sdk_data.name, self._instrumenter.sdk_in_app_framework
+                self.sdk_data.name, self._instrumenter.sdk_in_app_frameworks
             )
         )
         print(
