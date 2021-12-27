@@ -34,8 +34,11 @@ def test_instrument_ipa_no_signing(path_to_ipa, sdk, framework, tmpdir):
         )
         instrumenter.instrumentify()
 
-    with zipfile.ZipFile(path_to_ipa) as zfile:
+    path, ipa_name = os.path.split(path_to_ipa)
+    os.chdir(path)
+    with zipfile.ZipFile(ipa_name) as zfile:
         zfile.extractall(str(tmpdir))
+
     assert os.path.exists(
         os.path.join(
             str(tmpdir), "Payload", "awesomeopensource.app", "Frameworks", framework

@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals
 
 import argparse
+import errno
 import os
 import plistlib
 import shutil
@@ -51,8 +52,20 @@ def print_verbose(*args, **kwargs):
         print(*args, **kwargs)
 
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >= 2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        # possibly handle other errno cases here, otherwise finally:
+        else:
+            raise
+
+
 def copytree(src, dst, symlinks=False, ignore=None):
     # type: (str, str, bool, bool|None) -> None
+    mkdir_p(dst)
     for item in os.listdir(src):
         if item in FILES_COPY_SKIP_LIST:
             continue
@@ -375,7 +388,10 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         self._repackage()
 
     def _repackage(self):
-        zip_dir(os.path.join(self.extracted_dir_path, "Payload"), self.path_to_app)
+        old_path = os.getcwd()
+        os.chdir(self.extracted_dir_path)
+        zip_dir("Payload", self.path_to_app)
+        os.chdir(old_path)
 
 
 def zip_dir(dirpath, zippath):
