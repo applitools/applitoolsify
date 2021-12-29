@@ -1,6 +1,7 @@
 from __future__ import print_function, unicode_literals
 
 import argparse
+import errno
 import os
 import plistlib
 import shutil
@@ -51,8 +52,20 @@ def print_verbose(*args, **kwargs):
         print(*args, **kwargs)
 
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >= 2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        # possibly handle other errno cases here, otherwise finally:
+        else:
+            raise
+
+
 def copytree(src, dst, symlinks=False, ignore=None):
     # type: (str, str, bool, bool|None) -> None
+    mkdir_p(dst)
     for item in os.listdir(src):
         if item in FILES_COPY_SKIP_LIST:
             continue
@@ -117,12 +130,6 @@ SUPPORTED_FRAMEWORKS = {
 }
 
 
-def is_dir_in_zip(fileinfo):
-    # type: (zipfile.ZipInfo) -> bool
-    hi = fileinfo.external_attr >> 16
-    return (hi & 0x4000) > 0
-
-
 class SdkDownloadManager(object):
     """Download and extract selected SDK"""
 
@@ -167,7 +174,7 @@ class SdkDownloadManager(object):
         # always download latest sdk
         with urlopen(self.sdk_data.download_url) as zipresp:
             with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
-                extracted_path = self._extract_specific_folder(
+                extracted_path = Archiver.extract_specific_folder(
                     self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
                 )
         if extracted_path != self.sdk_data.sdk_location:
@@ -175,55 +182,6 @@ class SdkDownloadManager(object):
                 "Mismatch of extract desired location and actual sdk location location."
             )
         return self.sdk_data
-
-    @staticmethod
-    def _extract_specific_folder(extract_to_path, zfile, extract_dir_name):
-        # type: (str, zipfile.ZipFile, str) -> str
-        target_dir = os.path.join(extract_to_path, extract_dir_name)
-
-        # if `extract_dir_name` dir not present in archive raise an exception
-        if not all(
-            True
-            for m in zfile.filelist
-            if is_dir_in_zip(m) and extract_dir_name in m.filename
-        ):
-            raise RuntimeError("`{}` not present in archive")
-
-        # find index of searched dir to split in the future
-        extract_dir_name_index = -1
-        for member in zfile.filelist:
-            if not is_dir_in_zip(member):
-                continue
-
-            splitted_path = member.filename.split("/")
-            try:
-                found_dir_index = splitted_path.index(extract_dir_name)
-            except ValueError:
-                continue
-            if found_dir_index != -1:
-                extract_dir_name_index = found_dir_index
-                break
-
-        for member in zfile.filelist:
-            splitted_path = member.filename.split("/")
-            filename = "/".join(splitted_path[extract_dir_name_index:])
-            # skip top directories
-            if not filename.startswith(extract_dir_name):
-                continue
-            targetpath = os.path.join(extract_to_path, filename)
-            # Create all upper directories if necessary.
-            upperdirs = os.path.dirname(targetpath)
-            if upperdirs and not os.path.exists(upperdirs):
-                os.makedirs(upperdirs)
-
-            if is_dir_in_zip(member):
-                if not os.path.isdir(targetpath):
-                    os.mkdir(targetpath)
-                continue
-
-            with zfile.open(member) as source, open(targetpath, "wb") as target:
-                shutil.copyfileobj(source, target)
-        return target_dir
 
 
 class _InstrumentifyStrategy(object):
@@ -239,9 +197,13 @@ class _InstrumentifyStrategy(object):
         self.provisioning_profile = provisioning_profile
 
     @property
-    def sdk_in_app_framework(self):
+    def app_frameworks(self):
+        return NotImplemented
+
+    @property
+    def sdk_in_app_frameworks(self):
         # type: () -> str
-        raise NotImplemented
+        return os.path.join(self.app_frameworks, self.sdk_data.name)
 
     def instrumentify(self):
         raise NotImplemented
@@ -251,12 +213,11 @@ class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
 
     @property
-    def sdk_in_app_framework(self):
-        # type: () -> str
-        return os.path.join(self.path_to_app, "Frameworks", self.sdk_data.name)
+    def app_frameworks(self):
+        return os.path.join(self.path_to_app, "Frameworks")
 
     def instrumentify(self):
-        copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
+        copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
 
 
 class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -287,12 +248,11 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         return self._app_in_payload
 
     @property
-    def sdk_in_app_framework(self):
-        # type: () -> str
-        return os.path.join(self.app_in_payload, "Frameworks", self.sdk_data.name)
+    def app_frameworks(self):
+        return os.path.join(self.app_in_payload, "Frameworks")
 
     def instrumentify(self):
-        copytree(self.sdk_data.sdk_location, self.sdk_in_app_framework)
+        copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
         try:
             self._resign()
         except Exception as err:
@@ -364,21 +324,81 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         self._repackage()
 
     def _repackage(self):
-        zip_dir(os.path.join(self.extracted_dir_path, "Payload"), self.path_to_app)
+        old_path = os.getcwd()
+        try:
+            os.chdir(self.extracted_dir_path)
+            Archiver.zip_dir("./Payload/", self.path_to_app)
+        finally:
+            os.chdir(old_path)
 
 
-def zip_dir(dirpath, zippath):
-    with zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED) as zfile:
-        basedir = os.path.dirname(dirpath) + "/"
-        for root, dirs, files in os.walk(dirpath):
-            if os.path.basename(root)[0] == ".":
-                continue  # skip hidden directories
-            dirname = root.replace(basedir, "")
-            for f in files:
-                if f[-1] == "~" or (f[0] == "." and f != ".htaccess"):
-                    # skip backup files and all hidden files except .htaccess
-                    continue
-                zfile.write(os.path.join(root, f), os.path.join(dirname, f))
+class Archiver(object):
+    @staticmethod
+    def is_dir_in_zip(fileinfo):
+        # type: (zipfile.ZipInfo) -> bool
+        hi = fileinfo.external_attr >> 16
+        return (hi & 0x4000) > 0
+
+    @staticmethod
+    def zip_dir(dirpath, zippath):
+        with zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED) as zfile:
+            for root, dirs, files in os.walk("."):
+                if os.path.basename(root)[0] == ".":
+                    continue  # skip hidden directories
+                for f in files:
+                    if f[-1] == "~" or (f[0] == "." and f != ".htaccess"):
+                        # skip backup files and all hidden files except .htaccess
+                        continue
+                    zfile.write(os.path.join(root, f))
+
+    @staticmethod
+    def extract_specific_folder(extract_to_path, zfile, extract_dir_name):
+        # type: (str, zipfile.ZipFile, str) -> str
+        target_dir = os.path.join(extract_to_path, extract_dir_name)
+
+        # if `extract_dir_name` dir not present in archive raise an exception
+        if not all(
+            True
+            for m in zfile.filelist
+            if Archiver.is_dir_in_zip(m) and extract_dir_name in m.filename
+        ):
+            raise RuntimeError("`{}` not present in archive")
+
+        # find index of searched dir to split in the future
+        extract_dir_name_index = -1
+        for member in zfile.filelist:
+            if not Archiver.is_dir_in_zip(member):
+                continue
+
+            splitted_path = member.filename.split("/")
+            try:
+                found_dir_index = splitted_path.index(extract_dir_name)
+            except ValueError:
+                continue
+            if found_dir_index != -1:
+                extract_dir_name_index = found_dir_index
+                break
+
+        for member in zfile.filelist:
+            splitted_path = member.filename.split("/")
+            filename = "/".join(splitted_path[extract_dir_name_index:])
+            # skip top directories
+            if not filename.startswith(extract_dir_name):
+                continue
+            targetpath = os.path.join(extract_to_path, filename)
+            # Create all upper directories if necessary.
+            upperdirs = os.path.dirname(targetpath)
+            if upperdirs and not os.path.exists(upperdirs):
+                os.makedirs(upperdirs)
+
+            if Archiver.is_dir_in_zip(member):
+                if not os.path.isdir(targetpath):
+                    os.mkdir(targetpath)
+                continue
+
+            with zfile.open(member) as source, open(targetpath, "wb") as target:
+                shutil.copyfileobj(source, target)
+        return target_dir
 
 
 class Instrumenter(object):
@@ -410,7 +430,7 @@ class Instrumenter(object):
 
     def was_already_instrumented(self):
         # type: () -> bool
-        if os.path.exists(self._instrumenter.sdk_in_app_framework):
+        if os.path.exists(self._instrumenter.sdk_in_app_frameworks):
             return True
         else:
             return False
@@ -419,11 +439,11 @@ class Instrumenter(object):
         if self.was_already_instrumented():
             print_verbose("App already instrumented. Updating...")
             # remove old installation
-            shutil.rmtree(self._instrumenter.sdk_in_app_framework)
+            shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
         self._instrumenter.instrumentify()
         print_verbose(
             "`{}` framework was added to `{}`".format(
-                self.sdk_data.name, self._instrumenter.sdk_in_app_framework
+                self.sdk_data.name, self._instrumenter.sdk_in_app_frameworks
             )
         )
         print(
