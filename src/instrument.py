@@ -389,23 +389,23 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
 
     def _repackage(self):
         old_path = os.getcwd()
-        os.chdir(self.extracted_dir_path)
-        zip_dir("Payload", self.path_to_app)
-        os.chdir(old_path)
+        try:
+            os.chdir(self.extracted_dir_path)
+            zip_dir("./Payload/", self.path_to_app)
+        finally:
+            os.chdir(old_path)
 
 
 def zip_dir(dirpath, zippath):
     with zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED) as zfile:
-        basedir = os.path.dirname(dirpath) + "/"
-        for root, dirs, files in os.walk(dirpath):
+        for root, dirs, files in os.walk("."):
             if os.path.basename(root)[0] == ".":
                 continue  # skip hidden directories
-            dirname = root.replace(basedir, "")
             for f in files:
                 if f[-1] == "~" or (f[0] == "." and f != ".htaccess"):
                     # skip backup files and all hidden files except .htaccess
                     continue
-                zfile.write(os.path.join(root, f), os.path.join(dirname, f))
+                zfile.write(os.path.join(root, f))
 
 
 class Instrumenter(object):
