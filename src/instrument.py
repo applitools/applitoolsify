@@ -505,14 +505,15 @@ def run():
     args = cli_parser().parse_args()
     if not validate_path_to_app(args.path_to_app):
         sys.exit(1)
-
+    path_to_app = os.path.abspath(args.path_to_app)
+    
     if args.verbose:
         global VERBOSE
         VERBOSE = True
 
     with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
         instrumenter = Instrumenter(
-            args.path_to_app,
+            path_to_app,
             sdk_data,
             getattr(args, "signing_certificate_name", None),
             getattr(args, "provisioning_profile", None),
