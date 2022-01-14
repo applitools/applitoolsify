@@ -436,12 +436,12 @@ class Instrumenter(object):
         provisioning_profile=None,
     ):
         # type: (str, SdkData, str, str) -> None
-        self.path_to_app = path_to_app
-        self.app_name = os.path.basename(path_to_app)
+        self.path_to_app = os.path.abspath(path_to_app)
+        self.app_name = path_to_app
         _, self.app_ext = os.path.splitext(path_to_app)
         self.sdk_data = sdk_data
         self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
-            path_to_app=path_to_app,
+            path_to_app=self.path_to_app,
             sdk_data=sdk_data,
             signing_certificate_name=signing_certificate_name,
             provisioning_profile=provisioning_profile,
@@ -528,15 +528,14 @@ def run():
     args = cli_parser().parse_args()
     if not validate_path_to_app(args.path_to_app):
         sys.exit(1)
-    path_to_app = os.path.abspath(args.path_to_app)
-    
+
     if args.verbose:
         global VERBOSE
         VERBOSE = True
 
     with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
         instrumenter = Instrumenter(
-            path_to_app,
+            args.path_to_app,
             sdk_data,
             getattr(args, "signing_certificate_name", None),
             getattr(args, "provisioning_profile", None),
