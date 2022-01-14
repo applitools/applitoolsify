@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import traceback
 import zipfile
 from io import BytesIO
 
@@ -64,17 +65,24 @@ def mkdir_p(path):
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
-    # type: (str, str, bool, bool|None) -> None
-    mkdir_p(dst)
-    for item in os.listdir(src):
-        if item in FILES_COPY_SKIP_LIST:
-            continue
-        s = os.path.join(src, item)
-        d = os.path.join(dst, item)
-        if os.path.isdir(s):
-            shutil.copytree(s, d, symlinks, ignore)
-        else:
-            shutil.copy2(s, d)
+    # type: (str, str, bool, bool|None) -> bool
+    try:
+        mkdir_p(dst)
+        for item in os.listdir(src):
+            if item in FILES_COPY_SKIP_LIST:
+                continue
+            s = os.path.join(src, item)
+            d = os.path.join(dst, item)
+            if os.path.isdir(s):
+                shutil.copytree(s, d, symlinks, ignore)
+            else:
+                shutil.copy2(s, d)
+        return True
+    except Exception:
+        print("Failed to copy `{}` to `{}`".format(src, dst))
+        if VERBOSE:
+            traceback.print_exc()
+        return False
 
 
 class SdkParams(object):
@@ -206,6 +214,7 @@ class _InstrumentifyStrategy(object):
         return os.path.join(self.app_frameworks, self.sdk_data.name)
 
     def instrumentify(self):
+        # type: () -> bool
         raise NotImplemented
 
 
@@ -217,7 +226,8 @@ class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
         return os.path.join(self.path_to_app, "Frameworks")
 
     def instrumentify(self):
-        copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
+        # type: () -> bool
+        return copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
 
 
 class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -252,16 +262,26 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         return os.path.join(self.app_in_payload, "Frameworks")
 
     def instrumentify(self):
-        copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
+        # type: () -> bool
+        if not copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks):
+            return False
+
         try:
             self._resign()
-        except Exception as err:
+        except Exception:
             print("Failed to sign. Please, sign it manually")
             if VERBOSE:
-                import traceback
-
                 traceback.print_exc()
-        self._repackage()
+            return False
+
+        try:
+            self._repackage()
+        except Exception:
+            print("Failed to repackage. Please, sign it manually")
+            if VERBOSE:
+                traceback.print_exc()
+            return False
+        return True
 
     def __extract_entitlements(self, profile_in_app_path):
         pl_str = subprocess.check_output(
@@ -321,7 +341,6 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         to_sign_files = self.__find_files_to_sign()
         self.__extract_entitlements(profile_in_app_path)
         self.__sign_files(to_sign_files)
-        self._repackage()
 
     def _repackage(self):
         old_path = os.getcwd()
@@ -436,11 +455,14 @@ class Instrumenter(object):
             return False
 
     def instrumentify(self):
+        # type: () -> bool
         if self.was_already_instrumented():
             print_verbose("App already instrumented. Updating...")
             # remove old installation
             shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
-        self._instrumenter.instrumentify()
+        if not self._instrumenter.instrumentify():
+            print("Failed to instrument `{}`".format(self.path_to_app))
+            return False
         print_verbose(
             "`{}` framework was added to `{}`".format(
                 self.sdk_data.name, self._instrumenter.sdk_in_app_frameworks
@@ -451,6 +473,7 @@ class Instrumenter(object):
                 self.path_to_app, self.sdk_data.name
             )
         )
+        return True
 
 
 def cli_parser():
