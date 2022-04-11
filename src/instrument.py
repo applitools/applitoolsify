@@ -192,10 +192,11 @@ class SdkDownloadManager(object):
             with urlopen(self.sdk_data.download_url) as zipresp:
                 print("Here")
                 with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
-                    import ipdb;ipdb.set_trace()
+                    #import ipdb;ipdb.set_trace()
                     extracted_path = Archiver.extract_specific_folder(
                         self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
                     )
+                import ipdb;ipdb.set_trace()
         except Exception as e:
             e.print_verbose()
         if extracted_path != self.sdk_data.sdk_location:
@@ -241,7 +242,8 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
     def instrumentify(self):
         # type: () -> bool
         print("Android instrumentify!")
-        return copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
+        subprocess.check_call(["bash","./setup_pyenv.sh"], cwd="./injection/")
+        return subprocess.check_call(["bash", "./patchnfill.sh", "../duckduckgo-5.87.0-play-debug.apk"], cwd="./injection/")
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
@@ -442,6 +444,7 @@ class Archiver(object):
 
             with zfile.open(member) as source, open(targetpath, "wb") as target:
                 shutil.copyfileobj(source, target)
+            os.chmod(targetpath, 0o775)
         return target_dir
 
 
@@ -482,7 +485,6 @@ class Instrumenter(object):
 
     def instrumentify(self):
         # type: () -> bool
-        import ipdb;ipdb.set_trace()
         #if self.was_already_instrumented():
         #    print_verbose("App already instrumented. Updating...")
             # remove old installation
