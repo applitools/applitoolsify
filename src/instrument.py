@@ -40,7 +40,7 @@ def validate_path_to_app(value):
     if not os.path.exists(value):
         print("! Path `{}` does not exist".format(value))
         return False
-    if not value.endswith(".app") and not value.endswith(".ipa"):
+    if not value.endswith(".app") and not value.endswith(".ipa") and not value.endswith(".apk"):
         print(
             "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
         )
@@ -88,7 +88,8 @@ def copytree(src, dst, symlinks=False, ignore=None):
 class SdkParams(object):
     ios_classic = "ios_classic"
     ios_ufg = "ios_ufg"
-    values = [ios_ufg, ios_classic]
+    android_ufg = "android_ufg"
+    values = [android_ufg, ios_ufg, ios_classic]
 
     def __init__(self, value):
         # type: (str)->None
@@ -123,6 +124,12 @@ class SdkData(object):
 
 
 SUPPORTED_FRAMEWORKS = {
+    SdkParams.android_ufg: SdkData(
+        **{
+            "name": "injection",
+            "download_url": "file:///tmp/ufglib.zip",
+        }
+    ),
     SdkParams.ios_ufg: SdkData(
         **{
             "name": "UFG_lib.xcframework",
@@ -146,6 +153,7 @@ class SdkDownloadManager(object):
         self.sdk_data = sdk_data
         # TODO: change it to tmp?
         self.sdks_dir = sys.path[0]  # curr dir
+        #import ipdb;ipdb.set_trace()
         self.sdk_data.add_sdk_location(os.path.join(self.sdks_dir, self.sdk_data.name))
 
     @classmethod
@@ -180,11 +188,16 @@ class SdkDownloadManager(object):
             )
         )
         # always download latest sdk
-        with urlopen(self.sdk_data.download_url) as zipresp:
-            with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
-                extracted_path = Archiver.extract_specific_folder(
-                    self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
-                )
+        try:
+            with urlopen(self.sdk_data.download_url) as zipresp:
+                print("Here")
+                with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
+                    import ipdb;ipdb.set_trace()
+                    extracted_path = Archiver.extract_specific_folder(
+                        self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
+                    )
+        except Exception as e:
+            e.print_verbose()
         if extracted_path != self.sdk_data.sdk_location:
             raise RuntimeError(
                 "Mismatch of extract desired location and actual sdk location location."
@@ -217,6 +230,18 @@ class _InstrumentifyStrategy(object):
         # type: () -> bool
         raise NotImplemented
 
+class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
+    """Patch Android `apk` with default SDK (XXX: Support multiple sdks)"""
+
+    @property
+    def app_frameworks(self):
+        print("Android app_frameworks(?)")
+        return os.path.join(self.path_to_app, "Frameworks")
+
+    def instrumentify(self):
+        # type: () -> bool
+        print("Android instrumentify!")
+        return copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
@@ -426,6 +451,7 @@ class Instrumenter(object):
     instrument_strategies = {
         "app": IOSAppPatcherInstrumentifyStrategy,
         "ipa": IOSIpaInstrumentifyStrategy,
+        "apk": AndroidInstrumentifyStrategy,
     }
 
     def __init__(
@@ -456,10 +482,11 @@ class Instrumenter(object):
 
     def instrumentify(self):
         # type: () -> bool
-        if self.was_already_instrumented():
-            print_verbose("App already instrumented. Updating...")
+        import ipdb;ipdb.set_trace()
+        #if self.was_already_instrumented():
+        #    print_verbose("App already instrumented. Updating...")
             # remove old installation
-            shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
+        #    shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
         if not self._instrumenter.instrumentify():
             print("Failed to instrument `{}`".format(self.path_to_app))
             return False
@@ -499,7 +526,7 @@ def cli_parser():
     parser.add_argument(
         "path_to_app",
         type=str,
-        help="Path to the `.app` or `.ipa` for applitoolsify",
+        help="Path to the `.app`, `.ipa` or `.apk` for applitoolsify",
     )
     parser.add_argument(
         "sdk",

@@ -62,7 +62,7 @@ def _instrumenter(debug_with_local_run=False):
 
 
 def main():
-    with _instrumenter(debug_with_local_run=False) as run:
+    with _instrumenter(debug_with_local_run=True) as run:
         run()
 
 
