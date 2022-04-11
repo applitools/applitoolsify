@@ -127,7 +127,7 @@ class SdkData(object):
 SUPPORTED_FRAMEWORKS = {
     SdkParams.android_ufg: SdkData(
         **{
-            "name": "injection",
+            "name": "UFG_lib",
             "download_url": "file:///tmp/ufglib.zip",
         }
     ),
@@ -188,14 +188,11 @@ class SdkDownloadManager(object):
             )
         )
         # always download latest sdk
-        try:
-            with urlopen(self.sdk_data.download_url) as zipresp:
-                with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
-                    extracted_path = Archiver.extract_specific_folder(
-                        self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
-                    )
-        except Exception as e:
-            e.print_verbose()
+        with urlopen(self.sdk_data.download_url) as zipresp:
+            with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
+                extracted_path = Archiver.extract_specific_folder(
+                    self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
+                )
         if extracted_path != self.sdk_data.sdk_location:
             raise RuntimeError(
                 "Mismatch of extract desired location and actual sdk location location."
@@ -229,7 +226,11 @@ class _InstrumentifyStrategy(object):
         raise NotImplemented
 
 class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
-    """Patch Android `apk` with default SDK (XXX: Support multiple sdks)"""
+    """
+       Patch Android `apk` with default SDK (XXX: Support multiple sdks)
+       This is a very basic implementation essentially calling the main
+       script for android injector provided in the zip file
+    """
 
     @property
     def app_frameworks(self):
@@ -449,6 +450,7 @@ class Archiver(object):
 
             with zfile.open(member) as source, open(targetpath, "wb") as target:
                 shutil.copyfileobj(source, target)
+            # Required to get android scripts working
             os.chmod(targetpath, 0o775)
         return target_dir
 
