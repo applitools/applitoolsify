@@ -10,6 +10,7 @@ import sys
 import tempfile
 import traceback
 import zipfile
+import time
 from io import BytesIO
 
 PY2 = True if sys.version_info[0] == 2 else False
@@ -153,7 +154,6 @@ class SdkDownloadManager(object):
         self.sdk_data = sdk_data
         # TODO: change it to tmp?
         self.sdks_dir = sys.path[0]  # curr dir
-        #import ipdb;ipdb.set_trace()
         self.sdk_data.add_sdk_location(os.path.join(self.sdks_dir, self.sdk_data.name))
 
     @classmethod
@@ -190,13 +190,10 @@ class SdkDownloadManager(object):
         # always download latest sdk
         try:
             with urlopen(self.sdk_data.download_url) as zipresp:
-                print("Here")
                 with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
-                    #import ipdb;ipdb.set_trace()
                     extracted_path = Archiver.extract_specific_folder(
                         self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
                     )
-                import ipdb;ipdb.set_trace()
         except Exception as e:
             e.print_verbose()
         if extracted_path != self.sdk_data.sdk_location:
@@ -236,14 +233,22 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
 
     @property
     def app_frameworks(self):
-        print("Android app_frameworks(?)")
+        # Not used for android, kept bc required
         return os.path.join(self.path_to_app, "Frameworks")
 
     def instrumentify(self):
         # type: () -> bool
-        print("Android instrumentify!")
-        subprocess.check_call(["bash","./setup_pyenv.sh"], cwd="./injection/")
-        return subprocess.check_call(["bash", "./patchnfill.sh", "../duckduckgo-5.87.0-play-debug.apk"], cwd="./injection/")
+        android_log=open("./android-log.txt","a+")
+        android_log.write("\n")
+        android_log.write("["+str(time.time())+"] **** New run ****\n")
+        android_log.write("\n")
+        android_log.flush()
+        print("Creating runtime...")
+        subprocess.check_call(["bash","./setup_pyenv.sh"], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
+        print("Preparing application...")
+        ret = subprocess.check_call(["bash", "./patchnfill.sh", self.path_to_app], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
+        shutil.copytree(str(self.sdk_data.sdk_location)+"/out", "./instrumented-apk", dirs_exist_ok=True)
+        return ret == 0
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
