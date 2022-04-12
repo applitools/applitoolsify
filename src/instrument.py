@@ -43,7 +43,7 @@ def validate_path_to_app(value):
         return False
     if not value.endswith(".app") and not value.endswith(".ipa") and not value.endswith(".apk"):
         print(
-            "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
+            "! Supported only `*.app`, `*.ipa` or `*.apk` apps. You provided: `{}`".format(value)
         )
         return False
     return True
@@ -88,9 +88,9 @@ def copytree(src, dst, symlinks=False, ignore=None):
 
 class SdkParams(object):
     ios_classic = "ios_classic"
-    ios_ufg = "ios_ufg"
-    android_ufg = "android_ufg"
-    values = [android_ufg, ios_ufg, ios_classic]
+    ios_nmg = "ios_nmg"
+    android_nmg = "android_nmg"
+    values = [android_nmg, ios_nmg, ios_classic]
 
     def __init__(self, value):
         # type: (str)->None
@@ -125,13 +125,13 @@ class SdkData(object):
 
 
 SUPPORTED_FRAMEWORKS = {
-    SdkParams.android_ufg: SdkData(
+    SdkParams.android_nmg: SdkData(
         **{
             "name": "UFG_lib",
             "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib.zip",
         }
     ),
-    SdkParams.ios_ufg: SdkData(
+    SdkParams.ios_nmg: SdkData(
         **{
             "name": "UFG_lib.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/ufg-mobile/UFG_lib.xcframework.zip",
