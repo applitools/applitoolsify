@@ -492,10 +492,11 @@ class Instrumenter(object):
 
     def instrumentify(self):
         # type: () -> bool
-        #if self.was_already_instrumented():
-        #    print_verbose("App already instrumented. Updating...")
+        if not self.app_ext.lstrip(".") == "apk":
+            if self.was_already_instrumented():
+                print_verbose("App already instrumented. Updating...")
             # remove old installation
-        #    shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
+            shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
         if not self._instrumenter.instrumentify():
             print("Failed to instrument `{}`".format(self.path_to_app))
             return False
