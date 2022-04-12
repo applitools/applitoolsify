@@ -10,6 +10,7 @@ import sys
 import tempfile
 import traceback
 import zipfile
+import time
 from io import BytesIO
 
 PY2 = True if sys.version_info[0] == 2 else False
@@ -40,9 +41,9 @@ def validate_path_to_app(value):
     if not os.path.exists(value):
         print("! Path `{}` does not exist".format(value))
         return False
-    if not value.endswith(".app") and not value.endswith(".ipa"):
+    if not value.endswith(".app") and not value.endswith(".ipa") and not value.endswith(".apk"):
         print(
-            "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(value)
+            "! Supported only `*.app`, `*.ipa` or `*.apk` apps. You provided: `{}`".format(value)
         )
         return False
     return True
@@ -87,8 +88,9 @@ def copytree(src, dst, symlinks=False, ignore=None):
 
 class SdkParams(object):
     ios_classic = "ios_classic"
-    ios_ufg = "ios_ufg"
-    values = [ios_ufg, ios_classic]
+    ios_nmg = "ios_nmg"
+    android_nmg = "android_nmg"
+    values = [android_nmg, ios_nmg, ios_classic]
 
     def __init__(self, value):
         # type: (str)->None
@@ -123,7 +125,13 @@ class SdkData(object):
 
 
 SUPPORTED_FRAMEWORKS = {
-    SdkParams.ios_ufg: SdkData(
+    SdkParams.android_nmg: SdkData(
+        **{
+            "name": "UFG_lib",
+            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib.zip",
+        }
+    ),
+    SdkParams.ios_nmg: SdkData(
         **{
             "name": "UFG_lib.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/ufg-mobile/UFG_lib.xcframework.zip",
@@ -217,6 +225,31 @@ class _InstrumentifyStrategy(object):
         # type: () -> bool
         raise NotImplemented
 
+class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
+    """
+       Patch Android `apk` with default SDK (XXX: Support multiple sdks)
+       This is a very basic implementation essentially calling the main
+       script for android injector provided in the zip file
+    """
+
+    @property
+    def app_frameworks(self):
+        # Not used for android, kept bc required
+        return os.path.join(self.path_to_app, "Frameworks")
+
+    def instrumentify(self):
+        # type: () -> bool
+        android_log=open("./android-log.txt","a+")
+        android_log.write("\n")
+        android_log.write("["+str(time.time())+"] **** New run ****\n")
+        android_log.write("\n")
+        android_log.flush()
+        print("Creating runtime...")
+        subprocess.check_call(["bash","./setup_pyenv.sh"], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
+        print("Preparing application...")
+        ret = subprocess.check_call(["bash", "./patchnfill.sh", self.path_to_app], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
+        shutil.copytree(str(self.sdk_data.sdk_location)+"/out", "./instrumented-apk", dirs_exist_ok=True)
+        return ret == 0
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
@@ -417,6 +450,8 @@ class Archiver(object):
 
             with zfile.open(member) as source, open(targetpath, "wb") as target:
                 shutil.copyfileobj(source, target)
+            # Required to get android scripts working
+            os.chmod(targetpath, 0o775)
         return target_dir
 
 
@@ -426,6 +461,7 @@ class Instrumenter(object):
     instrument_strategies = {
         "app": IOSAppPatcherInstrumentifyStrategy,
         "ipa": IOSIpaInstrumentifyStrategy,
+        "apk": AndroidInstrumentifyStrategy,
     }
 
     def __init__(
@@ -456,8 +492,9 @@ class Instrumenter(object):
 
     def instrumentify(self):
         # type: () -> bool
-        if self.was_already_instrumented():
-            print_verbose("App already instrumented. Updating...")
+        if not self.app_ext.lstrip(".") == "apk":
+            if self.was_already_instrumented():
+                print_verbose("App already instrumented. Updating...")
             # remove old installation
             shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
         if not self._instrumenter.instrumentify():
@@ -499,7 +536,7 @@ def cli_parser():
     parser.add_argument(
         "path_to_app",
         type=str,
-        help="Path to the `.app` or `.ipa` for applitoolsify",
+        help="Path to the `.app`, `.ipa` or `.apk` for applitoolsify",
     )
     parser.add_argument(
         "sdk",
