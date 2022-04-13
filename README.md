@@ -1,5 +1,7 @@
 # Applitoolsify
-Add Applitools SDKs (`UFG_lib.xcframework` and\or `EyesiOSHelper.xcframework`) to `ipa` and `app` iOS apps.
+Add Applitools SDKs to your application:
+* iOS apps: `UFG_lib.xcframework` and\or `EyesiOSHelper.xcframework` to `ipa` and `app` .
+* Android apps: `NMG_lib.zip`
 
 ## Install
 `curl -O https://raw.githubusercontent.com/applitools/applitoolsify/main/applitoolsify.py`
