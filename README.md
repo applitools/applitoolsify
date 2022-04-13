@@ -10,10 +10,12 @@ Add Applitools SDKs (`UFG_lib.xcframework` and\or `EyesiOSHelper.xcframework`) t
 * On Windows you need to [verify that LongPathsEnabled](https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=powershell) parameter is set.
 
 Parameters:
-* _sdk_ - `ios_classic` or `ios_ufg`
+* _sdk_ - `ios_classic` | `ios_mng` | `android_nmg`
 
 ## Examples
 
 `python  applitoolsify.py "some.app" ios_classic`
 
-`python  applitoolsify.py "some.ipa" ios_ufg`
+`python  applitoolsify.py "some.ipa" ios_nmg`
+
+`python  applitoolsify.py "some.apk" android_nmg`
