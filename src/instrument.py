@@ -525,11 +525,11 @@ class Instrumenter(object):
                 )
             )
         else:
-        print(
-            "`{}` is ready for use with the `{}`".format(
-                self.path_to_app, self.sdk_data.name
+            print(
+                "`{}` is ready for use with the `{}`".format(
+                    self.path_to_app, self.sdk_data.name
+                )
             )
-        )
         return True
 
 
