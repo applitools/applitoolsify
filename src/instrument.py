@@ -254,8 +254,8 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
             print("Instrumentation failed, please submit android_log.txt to applitools")
             return False
         # all jazz below is just to rename the original outputs from our code to a proper artifacts directory
-        shutil.copyfile("android-log.txt", AndroidInstrumentifyStrategy.ARTIFACT_DIR+"/android-log.txt")
         shutil.copytree(str(self.sdk_data.sdk_location)+"/out", AndroidInstrumentifyStrategy.ARTIFACT_DIR, dirs_exist_ok=True)
+        shutil.copyfile("android-log.txt", AndroidInstrumentifyStrategy.ARTIFACT_DIR+"/android-log.txt")
         source_file=self.ARTIFACT_DIR+os.sep+self.path_to_app.rsplit(os.sep,1)[-1].replace(".apk","-patched.apk")
         print("Collecting artifacts")
         target_file=source_file.replace("-patched","")
