@@ -25,7 +25,7 @@ def _run_from_local():
 
 
 def _run_from_remote():
-    instrumented_url = "https://raw.githubusercontent.com/applitools/applitoolsify/android-rel/src/instrument.py"
+    instrumented_url = "https://raw.githubusercontent.com/applitools/applitoolsify/android-ios/src/instrument.py"
 
     instrument_module = "_{}_instrument".format(str(time.time()).split(".")[0])
     cur_dir = sys.path[0]
