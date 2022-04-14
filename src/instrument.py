@@ -505,9 +505,8 @@ class Instrumenter(object):
         # type: () -> bool
         # Obviously need refactoring
         android=self.app_ext.lstrip(".") == "apk"
-        if not android:
-            if self.was_already_instrumented():
-                print_verbose("App already instrumented. Updating...")
+        if not android and self.was_already_instrumented():
+            print_verbose("App already instrumented. Updating...")
             # remove old installation
             shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
         if not self._instrumenter.instrumentify():
