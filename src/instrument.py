@@ -127,7 +127,7 @@ class SdkData(object):
 SUPPORTED_FRAMEWORKS = {
     SdkParams.android_nmg: SdkData(
         **{
-            "name": "UFG_lib",
+            "name": "NMG_lib",
             "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib.zip",
         }
     ),
@@ -232,6 +232,8 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
        script for android injector provided in the zip file
     """
 
+    ARTIFACT_DIR="instrumented-apk"
+
     @property
     def app_frameworks(self):
         # Not used for android, kept bc required
@@ -248,7 +250,16 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
         subprocess.check_call(["bash","./setup_pyenv.sh"], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
         print("Preparing application...")
         ret = subprocess.check_call(["bash", "./patchnfill.sh", self.path_to_app], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
-        shutil.copytree(str(self.sdk_data.sdk_location)+"/out", "./instrumented-apk", dirs_exist_ok=True)
+        if ret != 0:
+            print("Instrumentation failed, please submit android_log.txt to applitools")
+            return False
+        # all jazz below is just to rename the original outputs from our code to a proper artifacts directory
+        shutil.copyfile("android-log.txt", AndroidInstrumentifyStrategy.ARTIFACT_DIR+"/android-log.txt")
+        shutil.copytree(str(self.sdk_data.sdk_location)+"/out", AndroidInstrumentifyStrategy.ARTIFACT_DIR, dirs_exist_ok=True)
+        source_file=self.ARTIFACT_DIR+os.sep+self.path_to_app.rsplit(os.sep,1)[-1].replace(".apk","-patched.apk")
+        print("Collecting artifacts")
+        target_file=source_file.replace("-patched","")
+        os.rename(source_file, target_file)
         return ret == 0
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -492,7 +503,9 @@ class Instrumenter(object):
 
     def instrumentify(self):
         # type: () -> bool
-        if not self.app_ext.lstrip(".") == "apk":
+        # Obviously need refactoring
+        android=self.app_ext.lstrip(".") == "apk"
+        if not android:
             if self.was_already_instrumented():
                 print_verbose("App already instrumented. Updating...")
             # remove old installation
@@ -505,6 +518,13 @@ class Instrumenter(object):
                 self.sdk_data.name, self._instrumenter.sdk_in_app_frameworks
             )
         )
+        if android:
+            print(
+                "Application is ready at {}".format(
+                    AndroidInstrumentifyStrategy.ARTIFACT_DIR+os.sep+self.path_to_app.split(os.sep)[-1]
+                )
+            )
+        else:
         print(
             "`{}` is ready for use with the `{}`".format(
                 self.path_to_app, self.sdk_data.name
@@ -570,6 +590,8 @@ def run():
         global VERBOSE
         VERBOSE = True
 
+    print("Instrumentation start")
+    print("Getting assets...")
     with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
         instrumenter = Instrumenter(
             args.path_to_app,
