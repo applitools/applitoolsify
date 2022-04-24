@@ -127,7 +127,7 @@ class SdkData(object):
 SUPPORTED_FRAMEWORKS = {
     SdkParams.android_nmg: SdkData(
         **{
-            "name": "UFG_lib",
+            "name": "NMG_lib",
             "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib.zip",
         }
     ),
