@@ -1,5 +1,5 @@
 from __future__ import print_function, unicode_literals
-
+from pathlib import Path
 import argparse
 import errno
 import os
@@ -254,13 +254,14 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
             print("Instrumentation failed, please submit android_log.txt to applitools")
             return False
         # all jazz below is just to rename the original outputs from our code to a proper artifacts directory
-        shutil.copytree(str(self.sdk_data.sdk_location)+"/out", AndroidInstrumentifyStrategy.ARTIFACT_DIR, dirs_exist_ok=True)
+        Path(AndroidInstrumentifyStrategy.ARTIFACT_DIR).mkdir(parents=True, exist_ok=True)
         shutil.copyfile("android-log.txt", AndroidInstrumentifyStrategy.ARTIFACT_DIR+"/android-log.txt")
-        source_file=self.ARTIFACT_DIR+os.sep+self.path_to_app.rsplit(os.sep,1)[-1].replace(".apk","-patched.apk")
+        source_file=f"{self.sdk_data.name}{os.sep}out{os.sep}{self.path_to_app.rsplit(os.sep,1)[-1].replace('.apk','-patched.apk')}"
         print("Collecting artifacts")
         target_file=source_file.replace("-patched","")
-        os.rename(source_file, target_file)
-        return ret == 0
+        target_file=f'{AndroidInstrumentifyStrategy.ARTIFACT_DIR}{os.sep}{target_file.rsplit("/", 1)[1]}'
+        ret=shutil.move(source_file, target_file)
+        return ret == target_file
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `app` with specific SDK"""
