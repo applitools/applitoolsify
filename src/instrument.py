@@ -241,26 +241,32 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
 
     def instrumentify(self):
         # type: () -> bool
-        android_log=open("./android-log.txt","a+")
-        android_log.write("\n")
-        android_log.write("["+str(time.time())+"] **** New run ****\n")
-        android_log.write("\n")
-        android_log.flush()
-        print("Creating runtime...")
-        subprocess.check_call(["bash","./setup_pyenv.sh"], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
         print("Preparing application...")
-        ret = subprocess.check_call(["bash", "./patchnfill.sh", self.path_to_app], cwd=self.sdk_data.sdk_location, stdout=android_log, stderr=android_log)
-        if ret != 0:
-            print("Instrumentation failed, please submit android_log.txt to applitools")
+        #os.chdir is required because we want to create our directories under applitoolsify NMG_lib dir
+        #but still allow them to run in standalone mode
+        os.chdir(self.sdk_data.sdk_location)
+        #Prepare output directory
+        Path(AndroidInstrumentifyStrategy.ARTIFACT_DIR).mkdir(parents=True, exist_ok=True)
+        # This is the module we downloaded, see source in injection
+        import NMG_lib
+        log_loc=f"{os.getcwd()}/android-nmg.log"
+        log_tgt=f"{AndroidInstrumentifyStrategy.ARTIFACT_DIR}{os.sep}android-nmg.log"
+        try:
+            out_dir=NMG_lib.patchnfill.run(self.path_to_app)
+            apk_loc=f"{out_dir}{os.sep}final.apk{os.sep}out-aligned-signed.apk"
+
+        except Exception:
+            #the log should be available regardless, make sure we keep it
+            shutil.copyfile(log_loc, log_tgt)
+            print(f"Instrumentation failed, please submit {log_tgt} to applitools")
             return False
         # all jazz below is just to rename the original outputs from our code to a proper artifacts directory
-        Path(AndroidInstrumentifyStrategy.ARTIFACT_DIR).mkdir(parents=True, exist_ok=True)
-        shutil.copyfile("android-log.txt", AndroidInstrumentifyStrategy.ARTIFACT_DIR+"/android-log.txt")
-        source_file=f"{self.sdk_data.name}{os.sep}out{os.sep}{self.path_to_app.rsplit(os.sep,1)[-1].replace('.apk','-patched.apk')}"
+        # (it used to be much more complicated (; )
+        
+        shutil.copyfile(log_loc, log_tgt)
         print("Collecting artifacts")
-        target_file=source_file.replace("-patched","")
-        target_file=f'{AndroidInstrumentifyStrategy.ARTIFACT_DIR}{os.sep}{target_file.rsplit("/", 1)[1]}'
-        ret=shutil.move(source_file, target_file)
+        target_file=f'{AndroidInstrumentifyStrategy.ARTIFACT_DIR}{os.sep}ready.apk'
+        ret=shutil.move(apk_loc, target_file)
         return ret == target_file
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
