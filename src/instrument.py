@@ -232,7 +232,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
        script for android injector provided in the zip file
     """
 
-    ARTIFACT_DIR="instrumented-apk"
+    ARTIFACT_DIR="../instrumented-apk"
 
     @property
     def app_frameworks(self):
@@ -527,7 +527,7 @@ class Instrumenter(object):
         if android:
             print(
                 "Application is ready at {}".format(
-                    AndroidInstrumentifyStrategy.ARTIFACT_DIR+os.sep+self.path_to_app.split(os.sep)[-1]
+                    AndroidInstrumentifyStrategy.ARTIFACT_DIR[3:]+os.sep+self.path_to_app.split(os.sep)[-1]
                 )
             )
         else:
