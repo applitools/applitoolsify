@@ -10,7 +10,7 @@ pytestmark = [
         "sdk, framework",
         [
             ("ios_classic", "EyesiOSHelper.xcframework"),
-            ("ios_ufg", "UFG_lib.xcframework"),
+            ("ios_nmg", "UFG_lib.xcframework"),
         ],
     )
 ]
