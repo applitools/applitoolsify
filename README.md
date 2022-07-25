@@ -7,7 +7,7 @@ Add Applitools SDKs to your application:
 `curl -O https://raw.githubusercontent.com/applitools/applitoolsify/main/applitoolsify.py`
 
 ## Usage
-`python -m applitoolsify.py <path-to-app> <sdk> `
+`python applitoolsify.py <path-to-app> <sdk> `
 
 * On Windows you need to [verify that LongPathsEnabled](https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=powershell) parameter is set.
 
