@@ -1,4 +1,6 @@
 from __future__ import print_function, unicode_literals
+
+from enum import Enum
 from pathlib import Path
 import argparse
 import os
@@ -38,24 +40,10 @@ def print_verbose(*args, **kwargs):
         print(*args, **kwargs)
 
 
-class SdkParams(object):
+class SdkParams(Enum):
     ios_classic = "ios_classic"
     ios_nmg = "ios_nmg"
     android_nmg = "android_nmg"
-    values = [android_nmg, ios_nmg, ios_classic]
-
-    def __init__(self, value):
-        # type: (str)->None
-        if value not in self.values:
-            raise ValueError
-        self.value = value
-
-    def __getitem__(self, item):
-        for item in self.items:
-            yield item
-
-    def __hash__(self):
-        return hash(self.value)
 
 
 class SdkData(object):
@@ -112,7 +100,7 @@ class SdkDownloadManager(object):
     def from_sdk_name(cls, sdk_name):
         # type: (str) -> SdkDownloadManager
         sdk = SdkParams(sdk_name)
-        sdk_data = SUPPORTED_FRAMEWORKS[sdk.value]
+        sdk_data = SUPPORTED_FRAMEWORKS[sdk]
         return cls(sdk_data)
 
     def __enter__(self):
@@ -517,7 +505,7 @@ def cli_parser():
     )
     parser.add_argument(
         "sdk",
-        choices=SdkParams.values,
+        choices=[e.value for e in SdkParams],
         help="Select SDK for applitoolsify",
     )
 
