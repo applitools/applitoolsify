@@ -54,7 +54,7 @@ class SdkData(object):
         # type: (str, str) -> None
         self.name = name
         self.download_url = download_url
-        self.sdk_location = None
+        self.sdk_location = None  # type: Path | None
 
     def __str__(self):
         return "SdkData<{}>".format(self.name)
@@ -156,7 +156,7 @@ class _InstrumentifyStrategy(object):
     @property
     def app_frameworks(self):
         # type: () -> Path
-        return NotImplementedError
+        raise NotImplementedError
 
     @property
     def sdk_in_app_frameworks(self):
@@ -176,7 +176,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
     script for android injector provided in the zip file
     """
 
-    ARTIFACT_DIR = "../instrumented-apk"
+    ARTIFACT_DIR = "instrumented-apk"
 
     @property
     def app_frameworks(self):
@@ -189,30 +189,34 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
         # os.chdir is required because we want to create our directories under applitoolsify NMG_lib dir
         # but still allow them to run in standalone mode
         os.chdir(self.sdk_data.sdk_location)
+        work_dir = Path(os.getcwd())
         # Prepare output directory
-        Path(AndroidInstrumentifyStrategy.ARTIFACT_DIR).mkdir(
-            parents=True, exist_ok=True
-        )
+        artifact_dir = work_dir.parent.joinpath(self.ARTIFACT_DIR)
+        artifact_dir.mkdir(parents=True, exist_ok=True)
         # This is the module we downloaded, see source in injection
         import NMG_lib
 
-        log_loc = f"{os.getcwd()}/android-nmg.log"
-        log_tgt = f"{AndroidInstrumentifyStrategy.ARTIFACT_DIR}{os.sep}android-nmg.log"
+        log_loc = work_dir.joinpath("android-nmg.log")
+        log_tgt = artifact_dir.joinpath("android-nmg.log")
         try:
             out_dir = NMG_lib.patchnfill.run(self.path_to_app)
-            apk_loc = f"{out_dir}{os.sep}final.apk{os.sep}out-aligned-signed.apk"
+            apk_loc = (
+                Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk")
+            )
 
-        except Exception:
+        except Exception as e:
             # the log should be available regardless, make sure we keep it
             shutil.copyfile(log_loc, log_tgt)
-            print(f"Instrumentation failed, please submit {log_tgt} to applitools")
+            print(
+                f"Instrumentation failed with error: {e}, please submit `{log_tgt}` to applitools"
+            )
             return False
         # all jazz below is just to rename the original outputs from our code to a proper artifacts directory
         # (it used to be much more complicated (; )
 
         shutil.copyfile(log_loc, log_tgt)
         print("Collecting artifacts")
-        target_file = f"{AndroidInstrumentifyStrategy.ARTIFACT_DIR}{os.sep}ready.apk"
+        target_file = artifact_dir.joinpath("ready.apk")
         ret = shutil.move(apk_loc, target_file)
         return ret == target_file
 
