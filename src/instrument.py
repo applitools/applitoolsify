@@ -38,7 +38,7 @@ VERBOSE = False
 
 def validate_path_to_app(value):
     # type: (str)->bool
-    if not os.path.exists(value):
+    if not Path(value).exists():
         print("! Path `{}` does not exist".format(value))
         return False
     if not value.endswith(".app") and not value.endswith(".ipa") and not value.endswith(".apk"):
@@ -119,7 +119,7 @@ class SdkData(object):
         return "SdkData<{}>".format(self.name)
 
     def add_sdk_location(self, path):
-        # type: (str) -> SdkData
+        # type: (Path) -> SdkData
         self.sdk_location = path
         return self
 
@@ -153,8 +153,8 @@ class SdkDownloadManager(object):
         # type: (SdkData) -> None
         self.sdk_data = sdk_data
         # TODO: change it to tmp?
-        self.sdks_dir = sys.path[0]  # curr dir
-        self.sdk_data.add_sdk_location(os.path.join(self.sdks_dir, self.sdk_data.name))
+        self.sdks_dir = Path(sys.path[0])  # curr dir
+        self.sdk_data.add_sdk_location(self.sdks_dir.joinpath( self.sdk_data.name))
 
     @classmethod
     def from_sdk_name(cls, sdk_name):
@@ -175,7 +175,7 @@ class SdkDownloadManager(object):
 
     def download_and_extract(self):
         # type: () -> SdkData
-        if os.path.exists(self.sdk_data.sdk_location):
+        if self.sdk_data.sdk_location.exists():
             print_verbose(
                 "We've detected saved version of `{}` in `{}`".format(
                     self.sdk_data.name, self.sdk_data.sdk_location
@@ -206,7 +206,7 @@ class _InstrumentifyStrategy(object):
     def __init__(
         self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
     ):
-        # type: (str, SdkData, str, str) -> None
+        # type: (Path, SdkData, str, str) -> None
         self.path_to_app = path_to_app
         self.sdk_data = sdk_data
         self.signing_certificate_name = signing_certificate_name
@@ -214,12 +214,13 @@ class _InstrumentifyStrategy(object):
 
     @property
     def app_frameworks(self):
+        # type: () -> Path
         return NotImplemented
 
     @property
     def sdk_in_app_frameworks(self):
-        # type: () -> str
-        return os.path.join(self.app_frameworks, self.sdk_data.name)
+        # type: () -> Path
+        return self.app_frameworks.joinpath(self.sdk_data.name)
 
     def instrumentify(self):
         # type: () -> bool
@@ -237,7 +238,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
     @property
     def app_frameworks(self):
         # Not used for android, kept bc required
-        return os.path.join(self.path_to_app, "Frameworks")
+        return Path(self.path_to_app) / "Frameworks"
 
     def instrumentify(self):
         # type: () -> bool
@@ -274,7 +275,7 @@ class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
 
     @property
     def app_frameworks(self):
-        return os.path.join(self.path_to_app, "Frameworks")
+        return Path(self.path_to_app).joinpath("Frameworks")
 
     def instrumentify(self):
         # type: () -> bool
@@ -291,8 +292,8 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         super(IOSIpaInstrumentifyStrategy, self).__init__(*args, **kwargs)
 
         self.tmp_dir = tempfile.mkdtemp()
-        self.extracted_dir_path = os.path.join(self.tmp_dir, "extracted")
-        self.entitlements_file_path = os.path.join(self.tmp_dir, "entitlements.plist")
+        self.extracted_dir_path = Path(self.tmp_dir).joinpath("extracted")
+        self.entitlements_file_path = Path(self.tmp_dir).joinpath("entitlements.plist")
         self._app_in_payload = None
         with zipfile.ZipFile(self.path_to_app) as zfile:
             zfile.extractall(self.extracted_dir_path)
@@ -301,16 +302,16 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
     def app_in_payload(self):
         # type: () -> str
         if self._app_in_payload is None:
-            payload_in_app = os.path.join(self.extracted_dir_path, "Payload")
+            payload_in_app = self.extracted_dir_path.joinpath("Payload")
             apps_in_payolad = os.listdir(payload_in_app)
             if len(apps_in_payolad) > 1:
                 raise RuntimeError("Payload contains more then one app")
-            self._app_in_payload = os.path.join(payload_in_app, apps_in_payolad[0])
+            self._app_in_payload = payload_in_app.joinpath(apps_in_payolad[0])
         return self._app_in_payload
 
     @property
     def app_frameworks(self):
-        return os.path.join(self.app_in_payload, "Frameworks")
+        return Path(self.app_in_payload).joinpath("Frameworks")
 
     def instrumentify(self):
         # type: () -> bool
@@ -382,9 +383,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         if sys.platform != "darwin":
             print("Signing with script is available only on macOS. Skip signing...")
             return
-        profile_in_app_path = os.path.join(
-            self.app_in_payload, "embedded.mobileprovision"
-        )
+        profile_in_app_path = Path(self.app_in_payload).joinpath("embedded.mobileprovision")
         shutil.copy2(self.provisioning_profile, profile_in_app_path)
         print_verbose(
             "Resigning with certificate: {}".format(self.signing_certificate_name)
@@ -423,8 +422,8 @@ class Archiver(object):
 
     @staticmethod
     def extract_specific_folder(extract_to_path, zfile, extract_dir_name):
-        # type: (str, zipfile.ZipFile, str) -> str
-        target_dir = os.path.join(extract_to_path, extract_dir_name)
+        # type: (Path, zipfile.ZipFile, str) -> Path
+        target_dir = extract_to_path.joinpath(extract_dir_name)
 
         # if `extract_dir_name` dir not present in archive raise an exception
         if not all(
@@ -455,14 +454,14 @@ class Archiver(object):
             # skip top directories
             if not filename.startswith(extract_dir_name):
                 continue
-            targetpath = os.path.join(extract_to_path, filename)
+            targetpath = extract_to_path.joinpath(filename)
             # Create all upper directories if necessary.
-            upperdirs = os.path.dirname(targetpath)
-            if upperdirs and not os.path.exists(upperdirs):
+            upperdirs = targetpath.parent
+            if upperdirs and not upperdirs.exists():
                 os.makedirs(upperdirs)
 
             if Archiver.is_dir_in_zip(member):
-                if not os.path.isdir(targetpath):
+                if not targetpath.is_dir():
                     os.mkdir(targetpath)
                 continue
 
@@ -490,9 +489,9 @@ class Instrumenter(object):
         provisioning_profile=None,
     ):
         # type: (str, SdkData, str, str) -> None
-        self.path_to_app = os.path.abspath(path_to_app)
+        self.path_to_app = Path(path_to_app).absolute()
         self.app_name = path_to_app
-        _, self.app_ext = os.path.splitext(path_to_app)
+        self.app_ext = self.path_to_app.suffix
         self.sdk_data = sdk_data
         self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
             path_to_app=self.path_to_app,
@@ -503,7 +502,7 @@ class Instrumenter(object):
 
     def was_already_instrumented(self):
         # type: () -> bool
-        if os.path.exists(self._instrumenter.sdk_in_app_frameworks):
+        if self._instrumenter.sdk_in_app_frameworks.exists():
             return True
         else:
             return False
