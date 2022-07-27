@@ -40,7 +40,7 @@ def _run_from_remote():
         instrument = import_module(instrument_module)
         return getattr(instrument, "run")
     except Exception as err:
-        print("! Failed to execute script.")
+        print(f"! Failed to execute script: {err}")
         import traceback
 
         traceback.print_exc()
