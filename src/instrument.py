@@ -1,7 +1,8 @@
 from __future__ import print_function, unicode_literals
+
+from enum import Enum
 from pathlib import Path
 import argparse
-import errno
 import os
 import plistlib
 import shutil
@@ -10,27 +11,11 @@ import sys
 import tempfile
 import traceback
 import zipfile
-import time
 from io import BytesIO
 
-PY2 = True if sys.version_info[0] == 2 else False
+from urllib.request import urlopen
 
-if PY2:
-    from contextlib import contextmanager
-
-    from urllib2 import urlopen as _urlopen
-
-    @contextmanager
-    def urlopen(*args, **kwargs):
-        resp = _urlopen(*args, **kwargs)
-        yield resp
-        resp.close()
-
-
-else:
-    from urllib.request import urlopen
-
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
@@ -38,10 +23,11 @@ VERBOSE = False
 
 def validate_path_to_app(value):
     # type: (str)->bool
-    if not os.path.exists(value):
+    path = Path(value)
+    if not path.exists():
         print("! Path `{}` does not exist".format(value))
         return False
-    if not value.endswith(".app") and not value.endswith(".ipa") and not value.endswith(".apk"):
+    if path.suffix not in [".app",".ipa",".apk"]:
         print(
             "! Supported only `*.app`, `*.ipa` or `*.apk` apps. You provided: `{}`".format(value)
         )
@@ -54,56 +40,10 @@ def print_verbose(*args, **kwargs):
         print(*args, **kwargs)
 
 
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >= 2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        # possibly handle other errno cases here, otherwise finally:
-        else:
-            raise
-
-
-def copytree(src, dst, symlinks=False, ignore=None):
-    # type: (str, str, bool, bool|None) -> bool
-    try:
-        mkdir_p(dst)
-        for item in os.listdir(src):
-            if item in FILES_COPY_SKIP_LIST:
-                continue
-            s = os.path.join(src, item)
-            d = os.path.join(dst, item)
-            if os.path.isdir(s):
-                shutil.copytree(s, d, symlinks, ignore)
-            else:
-                shutil.copy2(s, d)
-        return True
-    except Exception:
-        print("Failed to copy `{}` to `{}`".format(src, dst))
-        if VERBOSE:
-            traceback.print_exc()
-        return False
-
-
-class SdkParams(object):
+class SdkParams(Enum):
     ios_classic = "ios_classic"
     ios_nmg = "ios_nmg"
     android_nmg = "android_nmg"
-    values = [android_nmg, ios_nmg, ios_classic]
-
-    def __init__(self, value):
-        # type: (str)->None
-        if value not in self.values:
-            raise ValueError
-        self.value = value
-
-    def __getitem__(self, item):
-        for item in self.items:
-            yield item
-
-    def __hash__(self):
-        return hash(self.value)
 
 
 class SdkData(object):
@@ -119,7 +59,7 @@ class SdkData(object):
         return "SdkData<{}>".format(self.name)
 
     def add_sdk_location(self, path):
-        # type: (str) -> SdkData
+        # type: (Path) -> SdkData
         self.sdk_location = path
         return self
 
@@ -153,14 +93,14 @@ class SdkDownloadManager(object):
         # type: (SdkData) -> None
         self.sdk_data = sdk_data
         # TODO: change it to tmp?
-        self.sdks_dir = sys.path[0]  # curr dir
-        self.sdk_data.add_sdk_location(os.path.join(self.sdks_dir, self.sdk_data.name))
+        self.sdks_dir = Path(sys.path[0])  # curr dir
+        self.sdk_data.add_sdk_location(self.sdks_dir.joinpath( self.sdk_data.name))
 
     @classmethod
     def from_sdk_name(cls, sdk_name):
         # type: (str) -> SdkDownloadManager
         sdk = SdkParams(sdk_name)
-        sdk_data = SUPPORTED_FRAMEWORKS[sdk.value]
+        sdk_data = SUPPORTED_FRAMEWORKS[sdk]
         return cls(sdk_data)
 
     def __enter__(self):
@@ -175,7 +115,7 @@ class SdkDownloadManager(object):
 
     def download_and_extract(self):
         # type: () -> SdkData
-        if os.path.exists(self.sdk_data.sdk_location):
+        if self.sdk_data.sdk_location.exists():
             print_verbose(
                 "We've detected saved version of `{}` in `{}`".format(
                     self.sdk_data.name, self.sdk_data.sdk_location
@@ -206,7 +146,7 @@ class _InstrumentifyStrategy(object):
     def __init__(
         self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
     ):
-        # type: (str, SdkData, str, str) -> None
+        # type: (Path, SdkData, str, str) -> None
         self.path_to_app = path_to_app
         self.sdk_data = sdk_data
         self.signing_certificate_name = signing_certificate_name
@@ -214,12 +154,13 @@ class _InstrumentifyStrategy(object):
 
     @property
     def app_frameworks(self):
+        # type: () -> Path
         return NotImplemented
 
     @property
     def sdk_in_app_frameworks(self):
-        # type: () -> str
-        return os.path.join(self.app_frameworks, self.sdk_data.name)
+        # type: () -> Path
+        return self.app_frameworks.joinpath(self.sdk_data.name)
 
     def instrumentify(self):
         # type: () -> bool
@@ -237,7 +178,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
     @property
     def app_frameworks(self):
         # Not used for android, kept bc required
-        return os.path.join(self.path_to_app, "Frameworks")
+        return self.path_to_app.joinpath("Frameworks")
 
     def instrumentify(self):
         # type: () -> bool
@@ -274,11 +215,11 @@ class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
 
     @property
     def app_frameworks(self):
-        return os.path.join(self.path_to_app, "Frameworks")
+        return Path(self.path_to_app).joinpath("Frameworks")
 
     def instrumentify(self):
         # type: () -> bool
-        return copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
+        return shutil.copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
 
 
 class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -291,8 +232,8 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         super(IOSIpaInstrumentifyStrategy, self).__init__(*args, **kwargs)
 
         self.tmp_dir = tempfile.mkdtemp()
-        self.extracted_dir_path = os.path.join(self.tmp_dir, "extracted")
-        self.entitlements_file_path = os.path.join(self.tmp_dir, "entitlements.plist")
+        self.extracted_dir_path = Path(self.tmp_dir).joinpath("extracted")
+        self.entitlements_file_path = Path(self.tmp_dir).joinpath("entitlements.plist")
         self._app_in_payload = None
         with zipfile.ZipFile(self.path_to_app) as zfile:
             zfile.extractall(self.extracted_dir_path)
@@ -301,20 +242,20 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
     def app_in_payload(self):
         # type: () -> str
         if self._app_in_payload is None:
-            payload_in_app = os.path.join(self.extracted_dir_path, "Payload")
+            payload_in_app = self.extracted_dir_path.joinpath("Payload")
             apps_in_payolad = os.listdir(payload_in_app)
             if len(apps_in_payolad) > 1:
                 raise RuntimeError("Payload contains more then one app")
-            self._app_in_payload = os.path.join(payload_in_app, apps_in_payolad[0])
+            self._app_in_payload = payload_in_app.joinpath(apps_in_payolad[0])
         return self._app_in_payload
 
     @property
     def app_frameworks(self):
-        return os.path.join(self.app_in_payload, "Frameworks")
+        return Path(self.app_in_payload).joinpath("Frameworks")
 
     def instrumentify(self):
         # type: () -> bool
-        if not copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks):
+        if not shutil.copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks):
             return False
 
         try:
@@ -382,9 +323,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         if sys.platform != "darwin":
             print("Signing with script is available only on macOS. Skip signing...")
             return
-        profile_in_app_path = os.path.join(
-            self.app_in_payload, "embedded.mobileprovision"
-        )
+        profile_in_app_path = Path(self.app_in_payload).joinpath("embedded.mobileprovision")
         shutil.copy2(self.provisioning_profile, profile_in_app_path)
         print_verbose(
             "Resigning with certificate: {}".format(self.signing_certificate_name)
@@ -423,8 +362,8 @@ class Archiver(object):
 
     @staticmethod
     def extract_specific_folder(extract_to_path, zfile, extract_dir_name):
-        # type: (str, zipfile.ZipFile, str) -> str
-        target_dir = os.path.join(extract_to_path, extract_dir_name)
+        # type: (Path, zipfile.ZipFile, str) -> Path
+        target_dir = extract_to_path.joinpath(extract_dir_name)
 
         # if `extract_dir_name` dir not present in archive raise an exception
         if not all(
@@ -455,14 +394,14 @@ class Archiver(object):
             # skip top directories
             if not filename.startswith(extract_dir_name):
                 continue
-            targetpath = os.path.join(extract_to_path, filename)
+            targetpath = extract_to_path.joinpath(filename)
             # Create all upper directories if necessary.
-            upperdirs = os.path.dirname(targetpath)
-            if upperdirs and not os.path.exists(upperdirs):
+            upperdirs = targetpath.parent
+            if upperdirs and not upperdirs.exists():
                 os.makedirs(upperdirs)
 
             if Archiver.is_dir_in_zip(member):
-                if not os.path.isdir(targetpath):
+                if not targetpath.is_dir():
                     os.mkdir(targetpath)
                 continue
 
@@ -490,9 +429,9 @@ class Instrumenter(object):
         provisioning_profile=None,
     ):
         # type: (str, SdkData, str, str) -> None
-        self.path_to_app = os.path.abspath(path_to_app)
+        self.path_to_app = Path(path_to_app).absolute()
         self.app_name = path_to_app
-        _, self.app_ext = os.path.splitext(path_to_app)
+        self.app_ext = self.path_to_app.suffix
         self.sdk_data = sdk_data
         self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
             path_to_app=self.path_to_app,
@@ -503,7 +442,7 @@ class Instrumenter(object):
 
     def was_already_instrumented(self):
         # type: () -> bool
-        if os.path.exists(self._instrumenter.sdk_in_app_frameworks):
+        if self._instrumenter.sdk_in_app_frameworks.exists():
             return True
         else:
             return False
@@ -566,7 +505,7 @@ def cli_parser():
     )
     parser.add_argument(
         "sdk",
-        choices=SdkParams.values,
+        choices=[e.value for e in SdkParams],
         help="Select SDK for applitoolsify",
     )
 
