@@ -11,22 +11,7 @@ import traceback
 import zipfile
 from io import BytesIO
 
-PY2 = True if sys.version_info[0] == 2 else False
-
-if PY2:
-    from contextlib import contextmanager
-
-    from urllib2 import urlopen as _urlopen
-
-    @contextmanager
-    def urlopen(*args, **kwargs):
-        resp = _urlopen(*args, **kwargs)
-        yield resp
-        resp.close()
-
-
-else:
-    from urllib.request import urlopen
+from urllib.request import urlopen
 
 __version__ = "0.1.0"
 
@@ -36,10 +21,11 @@ VERBOSE = False
 
 def validate_path_to_app(value):
     # type: (str)->bool
-    if not Path(value).exists():
+    path = Path(value)
+    if not path.exists():
         print("! Path `{}` does not exist".format(value))
         return False
-    if not value.endswith(".app") and not value.endswith(".ipa") and not value.endswith(".apk"):
+    if path.suffix not in [".app",".ipa",".apk"]:
         print(
             "! Supported only `*.app`, `*.ipa` or `*.apk` apps. You provided: `{}`".format(value)
         )
