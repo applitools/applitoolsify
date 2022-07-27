@@ -21,8 +21,7 @@ def test_instrument_app_absolute_path(path_to_apk, sdk, framework):
             path_to_apk,
             sdk_data,
         )
-        instrumenter.instrumentify()
-    # assert os.path.exists(os.path.join(path_to_app, "Frameworks", framework))
+        assert instrumenter.instrumentify()
 
 
 def test_instrument_app_relative_path(path_to_apk, sdk, framework):
@@ -33,5 +32,4 @@ def test_instrument_app_relative_path(path_to_apk, sdk, framework):
             app_name,
             sdk_data,
         )
-        instrumenter.instrumentify()
-    # assert os.path.exists(os.path.join(app_name, "Frameworks", framework))
+        assert instrumenter.instrumentify()

@@ -22,7 +22,7 @@ def test_instrument_app_absolute_path(path_to_app, sdk, framework):
             path_to_app,
             sdk_data,
         )
-        instrumenter.instrumentify()
+        assert instrumenter.instrumentify()
     assert os.path.exists(os.path.join(path_to_app, "Frameworks", framework))
 
 
@@ -34,7 +34,7 @@ def test_instrument_app_relative_path(path_to_app, sdk, framework):
             app_name,
             sdk_data,
         )
-        instrumenter.instrumentify()
+        assert instrumenter.instrumentify()
     assert os.path.exists(os.path.join(app_name, "Frameworks", framework))
 
 
@@ -44,7 +44,7 @@ def test_instrument_ipa_no_signing_absolute_path(path_to_ipa, sdk, framework, tm
             path_to_ipa,
             sdk_data,
         )
-        instrumenter.instrumentify()
+        assert instrumenter.instrumentify()
 
     path, ipa_name = os.path.split(path_to_ipa)
     os.chdir(path)
@@ -66,7 +66,7 @@ def test_instrument_ipa_no_signing_relative_path(path_to_ipa, sdk, framework, tm
             ipa_name,
             sdk_data,
         )
-        instrumenter.instrumentify()
+        assert instrumenter.instrumentify()
 
     with zipfile.ZipFile(ipa_name) as zfile:
         zfile.extractall(str(tmpdir))
