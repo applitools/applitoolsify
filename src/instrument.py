@@ -178,7 +178,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
     @property
     def app_frameworks(self):
         # Not used for android, kept bc required
-        return Path(self.path_to_app) / "Frameworks"
+        return self.path_to_app.joinpath("Frameworks")
 
     def instrumentify(self):
         # type: () -> bool
