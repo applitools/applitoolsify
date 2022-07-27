@@ -1,7 +1,6 @@
 from __future__ import print_function, unicode_literals
 from pathlib import Path
 import argparse
-import errno
 import os
 import plistlib
 import shutil
@@ -10,7 +9,6 @@ import sys
 import tempfile
 import traceback
 import zipfile
-import time
 from io import BytesIO
 
 PY2 = True if sys.version_info[0] == 2 else False
@@ -52,38 +50,6 @@ def validate_path_to_app(value):
 def print_verbose(*args, **kwargs):
     if VERBOSE:
         print(*args, **kwargs)
-
-
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >= 2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        # possibly handle other errno cases here, otherwise finally:
-        else:
-            raise
-
-
-def copytree(src, dst, symlinks=False, ignore=None):
-    # type: (str, str, bool, bool|None) -> bool
-    try:
-        mkdir_p(dst)
-        for item in os.listdir(src):
-            if item in FILES_COPY_SKIP_LIST:
-                continue
-            s = os.path.join(src, item)
-            d = os.path.join(dst, item)
-            if os.path.isdir(s):
-                shutil.copytree(s, d, symlinks, ignore)
-            else:
-                shutil.copy2(s, d)
-        return True
-    except Exception:
-        print("Failed to copy `{}` to `{}`".format(src, dst))
-        if VERBOSE:
-            traceback.print_exc()
-        return False
 
 
 class SdkParams(object):
@@ -279,7 +245,7 @@ class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
 
     def instrumentify(self):
         # type: () -> bool
-        return copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
+        return shutil.copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
 
 
 class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -315,7 +281,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
 
     def instrumentify(self):
         # type: () -> bool
-        if not copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks):
+        if not shutil.copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks):
             return False
 
         try:
