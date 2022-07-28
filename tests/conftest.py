@@ -46,6 +46,6 @@ def path_to_app(tmpdir):
 @pytest.fixture()
 def path_to_apk(tmpdir):
     # type: (...) -> str
-    app_pth = get_resource_path("test.apk")
+    app_pth = get_resource_path("eyes-android-hello-world.apk")
     shutil.copy2(app_pth, str(tmpdir))
-    return str(tmpdir.join("test.apk"))
+    return str(tmpdir.join("eyes-android-hello-world.apk"))

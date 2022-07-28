@@ -15,7 +15,7 @@ pytestmark = [
 ]
 
 
-def test_instrument_app_absolute_path(path_to_apk, sdk, framework):
+def test_instrument_apk_absolute_path(path_to_apk, sdk, framework):
     with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
         instrumenter = Instrumenter(
             path_to_apk,
@@ -24,7 +24,7 @@ def test_instrument_app_absolute_path(path_to_apk, sdk, framework):
         assert instrumenter.instrumentify()
 
 
-def test_instrument_app_relative_path(path_to_apk, sdk, framework):
+def test_instrument_apk_relative_path(path_to_apk, sdk, framework):
     dir_with_app, app_name = os.path.split(path_to_apk)
     os.chdir(dir_with_app)
     with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
