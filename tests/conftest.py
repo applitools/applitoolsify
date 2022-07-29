@@ -1,4 +1,5 @@
 import codecs
+import os
 import shutil
 import zipfile
 from os import path
@@ -49,3 +50,10 @@ def path_to_apk(tmpdir):
     app_pth = get_resource_path("eyes-android-hello-world.apk")
     shutil.copy2(app_pth, str(tmpdir))
     return str(tmpdir.join("eyes-android-hello-world.apk"))
+
+
+@pytest.fixture
+def sauce_driver_url():
+    return "https://{}:{}@ondemand.saucelabs.com:443/wd/hub".format(
+        os.environ["SAUCE_USERNAME"], os.environ["SAUCE_ACCESS_KEY"]
+    )
