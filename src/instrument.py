@@ -364,11 +364,11 @@ class Archiver(object):
     @staticmethod
     def zip_dir(dirpath, zippath):
         with zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED) as zfile:
-            for root, dirs, files in os.walk("."):
-                if os.path.basename(root)[0] == ".":
+            for root, dirs, files in os.walk(dirpath):
+                if os.path.basename(root)[0] == dirpath:
                     continue  # skip hidden directories
                 for f in files:
-                    if f[-1] == "~" or (f[0] == "." and f != ".htaccess"):
+                    if f[-1] == "~" or (f[0] == dirpath and f != ".htaccess"):
                         # skip backup files and all hidden files except .htaccess
                         continue
                     zfile.write(os.path.join(root, f))
