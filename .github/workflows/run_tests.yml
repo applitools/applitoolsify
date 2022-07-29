@@ -1,13 +1,16 @@
 name: Test that applitoolsify works on multiple platorms and Python versions
 on: push
 jobs:
-  run-tests-on-lin-mac:
+  check-patching-android:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
         python-version: ["3.6", "3.10"]
     steps:
+      - name: Set the LongPathsEnabled on Windows
+        if: runner.os == 'Windows'
+        run: 'New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force'
       - name: Set up Python ${{ matrix.python-version }}
         if: ${{ !failure() }}
         uses: actions/setup-python@v2
@@ -29,23 +32,28 @@ jobs:
 
       - name: Run tests
         if: ${{ !failure() }}
-        run: pytest
+        run: pytest tests/test_instrument_android.py
 
-  run-tests-on-windows:
-    runs-on: windows-latest
+  check-patching-ios:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
         python-version: ["3.6", "3.10"]
     steps:
       - name: Set the LongPathsEnabled on Windows
+        if: runner.os == 'Windows'
         run: 'New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force'
-
       - name: Set up Python ${{ matrix.python-version }}
         if: ${{ !failure() }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-
+      - name: Set up Java 11 for apk patcher
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '11'
       - uses: actions/checkout@v2
         if: ${{ !failure() }}
 
@@ -57,4 +65,4 @@ jobs:
 
       - name: Run tests
         if: ${{ !failure() }}
-        run: pytest
+        run: pytest tests/test_instrument_ios.py
