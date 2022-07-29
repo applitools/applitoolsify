@@ -348,8 +348,9 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
     def _repackage(self):
         old_path = os.getcwd()
         try:
+            # Need to be in current folder to archive
             os.chdir(self.extracted_dir_path)
-            Archiver.zip_dir("./Payload/", self.path_to_app)
+            Archiver.zip_dir(".", self.path_to_app)
         finally:
             os.chdir(old_path)
 
@@ -365,10 +366,10 @@ class Archiver(object):
     def zip_dir(dirpath, zippath):
         with zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED) as zfile:
             for root, dirs, files in os.walk(dirpath):
-                if os.path.basename(root)[0] == dirpath:
+                if os.path.basename(root)[0] == ".":
                     continue  # skip hidden directories
                 for f in files:
-                    if f[-1] == "~" or (f[0] == dirpath and f != ".htaccess"):
+                    if f[-1] == "~" or (f[0] == "." and f != ".htaccess"):
                         # skip backup files and all hidden files except .htaccess
                         continue
                     zfile.write(os.path.join(root, f))
