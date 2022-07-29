@@ -479,7 +479,7 @@ class Instrumenter(object):
         if android:
             print(
                 "Application is ready at {}".format(
-                    AndroidInstrumentifyStrategy.ARTIFACT_DIR[3:] + os.sep + "ready.apk"
+                    AndroidInstrumentifyStrategy.ARTIFACT_DIR + os.sep + "ready.apk"
                 )
             )
         else:
