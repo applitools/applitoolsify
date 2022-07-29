@@ -10,6 +10,7 @@ Add Applitools SDKs to your application:
 `python applitoolsify.py <path-to-app> <sdk> `
 
 * On Windows you need to [verify that LongPathsEnabled](https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=powershell) parameter is set.
+* For patching Android apk the Java version must be 11+.
 
 Parameters:
 * _sdk_ - `ios_classic` | `ios_nmg` | `android_nmg`
