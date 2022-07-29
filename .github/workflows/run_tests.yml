@@ -91,4 +91,8 @@ jobs:
 
       - name: Run tests
         if: ${{ !failure() }}
+        env:
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
         run: pytest tests/test_e2e.py
