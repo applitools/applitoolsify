@@ -7,7 +7,8 @@ from pprint import pprint
 from src.instrument import AndroidInstrumentifyStrategy
 
 
-def applitoolsify_cmd(path_to_app: Path | str, sdk: str) -> Path:
+def applitoolsify_cmd(path_to_app, sdk):
+    # type: (Path | str, str) -> Path
     work_dir = Path(sys.path[0])
     os.chdir(work_dir)  # switch to applitoolsify directory
 
