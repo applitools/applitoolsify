@@ -1,10 +1,3 @@
-import os
-import subprocess
-import sys
-from pathlib import Path
-from pprint import pprint
-
-import requests
 from appium.webdriver import Remote
 from applitools.common import (
     AndroidDeviceInfo,
@@ -16,48 +9,12 @@ from applitools.common import (
 )
 from applitools.selenium import Eyes, VisualGridRunner
 
-from src.instrument import Archiver, AndroidInstrumentifyStrategy
-
-
-def upload_app_to_sauce(path_to_app_archive: str, app_name_on_sauce: str) -> int:
-    with open(path_to_app_archive, "rb") as f:
-        r = requests.post(
-            "https://api.us-west-1.saucelabs.com/v1/storage/upload",
-            files={"payload": f},
-            data={"name": app_name_on_sauce},
-            auth=(os.getenv("SAUCE_USERNAME"), os.getenv("SAUCE_ACCESS_KEY")),
-        )
-    r.raise_for_status()
-    return r.status_code
-
-
-def applitoolsify(path_to_app, sdk):
-    work_dir = Path(sys.path[0])
-    os.chdir(work_dir)  # switch to applitoolsify directory
-
-    os.environ["APPLITOOLSIFY_DEBUG"] = "True"
-    output = subprocess.run(
-        [
-            "python",
-            "applitoolsify.py",
-            path_to_app,
-            sdk,
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    pprint(output)
-    output.check_returncode()
-    if "Failed to instrument" in output.stdout:
-        raise Exception(f"Failed to patch {path_to_app}")
-    if sdk == "android_nmg":
-        return work_dir.joinpath(AndroidInstrumentifyStrategy.ARTIFACT_DIR, "ready.apk")
-    return path_to_app
+from src.instrument import Archiver
+from tests.utils import applitoolsify_cmd, upload_app_to_sauce
 
 
 def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
-    applitoolsify(path_to_app, "ios_nmg")
+    applitoolsify_cmd(path_to_app, "ios_nmg")
 
     path_to_app_zip = f"{path_to_app}.zip"
     app_name_on_sauce = "e2e_applitoolsify_test.app.zip"
@@ -94,7 +51,7 @@ def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
 
 
 def test_applitoolsify_android_apk(path_to_apk, sauce_driver_url):
-    path_to_apk = applitoolsify(path_to_apk, "android_nmg")
+    path_to_apk = applitoolsify_cmd(path_to_apk, "android_nmg")
 
     app_name_on_sauce = "e2e_applitoolsify_test.apk"
     upload_app_to_sauce(path_to_apk, app_name_on_sauce)

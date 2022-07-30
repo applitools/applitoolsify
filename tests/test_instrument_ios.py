@@ -1,9 +1,10 @@
 import os.path
 import zipfile
+from pathlib import Path
 
 import pytest
 
-from src.instrument import Instrumenter, SdkDownloadManager
+from tests.utils import applitoolsify_cmd
 
 pytestmark = [
     pytest.mark.parametrize(
@@ -17,58 +18,46 @@ pytestmark = [
 
 
 def test_instrument_app_absolute_path(path_to_app, sdk, framework):
-    with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
-        instrumenter = Instrumenter(
-            path_to_app,
-            sdk_data,
-        )
-        assert instrumenter.instrumentify()
-    assert os.path.exists(os.path.join(path_to_app, "Frameworks", framework))
+    applitoolsify_cmd(path_to_app, sdk)
+    assert path_to_app.joinpath("Frameworks", framework).exists()
 
 
-def test_instrument_app_relative_path(path_to_app, sdk, framework):
-    dir_with_app, app_name = os.path.split(path_to_app)
-    os.chdir(dir_with_app)
-    with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
-        instrumenter = Instrumenter(
-            app_name,
-            sdk_data,
-        )
-        assert instrumenter.instrumentify()
-    assert os.path.exists(os.path.join(app_name, "Frameworks", framework))
+def test_instrument_app_relative_path(
+    path_to_app_relative_to_applitoolsify, sdk, framework
+):
+    applitoolsify_cmd(path_to_app_relative_to_applitoolsify, sdk)
+    assert (
+        Path(__file__)
+        .parent.parent.joinpath("IOSTestApp.app", "Frameworks", framework)
+        .exists()
+    )
 
 
 def test_instrument_ipa_no_signing_absolute_path(path_to_ipa, sdk, framework, tmpdir):
-    with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
-        instrumenter = Instrumenter(
-            path_to_ipa,
-            sdk_data,
-        )
-        assert instrumenter.instrumentify()
+    applitoolsify_cmd(path_to_ipa, sdk)
 
     path, ipa_name = os.path.split(path_to_ipa)
     os.chdir(path)
     with zipfile.ZipFile(ipa_name) as zfile:
         zfile.extractall(str(tmpdir))
 
-    assert os.path.exists(
-        os.path.join(str(tmpdir), "Payload", "IOSTestApp.app", "Frameworks", framework)
+    assert (
+        Path(tmpdir)
+        .joinpath("Payload", "IOSTestApp.app", "Frameworks", framework)
+        .exists()
     )
 
 
-def test_instrument_ipa_no_signing_relative_path(path_to_ipa, sdk, framework, tmpdir):
-    dir_with_ipa, ipa_name = os.path.split(path_to_ipa)
-    os.chdir(dir_with_ipa)
-    with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
-        instrumenter = Instrumenter(
-            ipa_name,
-            sdk_data,
-        )
-        assert instrumenter.instrumentify()
+def test_instrument_ipa_no_signing_relative_path(
+    path_to_ipa_relative_to_applitoolsify, sdk, framework, tmpdir
+):
+    applitoolsify_cmd(path_to_ipa_relative_to_applitoolsify, sdk)
 
-    with zipfile.ZipFile(ipa_name) as zfile:
+    with zipfile.ZipFile(path_to_ipa_relative_to_applitoolsify) as zfile:
         zfile.extractall(str(tmpdir))
 
-    assert os.path.exists(
-        os.path.join(str(tmpdir), "Payload", "IOSTestApp.app", "Frameworks", framework)
+    assert (
+        Path(tmpdir)
+        .joinpath("Payload", "IOSTestApp.app", "Frameworks", framework)
+        .exists()
     )

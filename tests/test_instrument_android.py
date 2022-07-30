@@ -1,35 +1,22 @@
-import os.path
-import zipfile
+import shutil
+from pathlib import Path
 
-import pytest
-
-from src.instrument import Instrumenter, SdkDownloadManager
-
-pytestmark = [
-    pytest.mark.parametrize(
-        "sdk, framework",
-        [
-            ("android_nmg", "NMG_lib.zip"),
-        ],
-    )
-]
+from tests.utils import applitoolsify_cmd
 
 
-def test_instrument_apk_absolute_path(path_to_apk, sdk, framework):
-    with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
-        instrumenter = Instrumenter(
-            path_to_apk,
-            sdk_data,
-        )
-        assert instrumenter.instrumentify()
+def test_instrument_apk_absolute_path(path_to_apk):
+    artifacts_dir = Path(__file__).parent.parent.joinpath("instrumented-apk")
+    try:
+        applitoolsify_cmd(path_to_apk, "android_nmg")
+        assert artifacts_dir.joinpath("ready.apk").exists()
+    finally:
+        shutil.rmtree(artifacts_dir, ignore_errors=True)
 
 
-def test_instrument_apk_relative_path(path_to_apk, sdk, framework):
-    dir_with_app, app_name = os.path.split(path_to_apk)
-    os.chdir(dir_with_app)
-    with SdkDownloadManager.from_sdk_name(sdk) as sdk_data:
-        instrumenter = Instrumenter(
-            app_name,
-            sdk_data,
-        )
-        assert instrumenter.instrumentify()
+def test_instrument_apk_relative_path(path_to_apk_relative_to_applitoolsify):
+    artifacts_dir = Path(__file__).parent.parent.joinpath("instrumented-apk")
+    try:
+        applitoolsify_cmd(path_to_apk_relative_to_applitoolsify, "android_nmg")
+        assert artifacts_dir.joinpath("ready.apk").exists()
+    finally:
+        shutil.rmtree(artifacts_dir, ignore_errors=True)
