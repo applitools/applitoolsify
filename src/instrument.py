@@ -470,7 +470,7 @@ class Instrumenter(object):
             # remove old installation
             shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
         if not self._instrumenter.instrumentify():
-            print("Failed to instrument `{}`".format(self.path_to_app))
+            sys.stderr.write("Failed to instrument `{}`".format(self.path_to_app))
             return False
         print_verbose(
             "`{}` framework was added to `{}`".format(

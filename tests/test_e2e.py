@@ -47,7 +47,8 @@ def applitoolsify(path_to_app, sdk):
     )
     print(output)
     output.check_returncode()
-
+    if output.stderr:
+        raise Exception("Failed to patch")
 
 def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
     applitoolsify(path_to_app, "ios_nmg")
