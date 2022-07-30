@@ -205,11 +205,14 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
             )
 
         except Exception as e:
-            # the log should be available regardless, make sure we keep it
-            shutil.copyfile(log_loc, log_tgt)
-            print(
-                f"Instrumentation failed with error: {e}, please submit `{log_tgt}` to applitools"
-            )
+            # sometimes log file doesn't present which raise an exception during copying
+            if log_loc.exists():
+                shutil.copyfile(log_loc, log_tgt)
+                print(
+                    f"Instrumentation failed with error: {e}. Please submit `{log_tgt}` to applitools"
+                )
+            else:
+                print(f"Instrumentation failed with error: {e}. No log file")
             return False
         # all jazz below is just to rename the original outputs from our code to a proper artifacts directory
         # (it used to be much more complicated (; )
