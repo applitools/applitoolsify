@@ -1,19 +1,16 @@
 #!/usr/bin/env python
-from __future__ import print_function, unicode_literals
-
 import os
 import sys
 import time
 from contextlib import contextmanager
+from urllib.request import urlretrieve
 
 # stop writ *.pyc files to prevent from caching
 sys.dont_write_bytecode = True
 
-try:
-    from urllib.request import urlretrieve
-except ImportError:
-    from urllib import urlretrieve
 
+if sys.version_info < (3, 7):
+    raise SystemError("Minimum required Python version is 3.7")
 
 __version__ = "0.1.0"
 
@@ -62,7 +59,9 @@ def _instrumenter(debug_with_local_run=False):
 
 
 def main():
-    with _instrumenter(debug_with_local_run=False) as run:
+    with _instrumenter(
+        debug_with_local_run=os.environ.get("APPLITOOLSIFY_DEBUG", False)
+    ) as run:
         run()
 
 
