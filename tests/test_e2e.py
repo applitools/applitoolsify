@@ -25,11 +25,14 @@ def upload_app_to_sauce(path_to_app_archive: str, app_name_on_sauce: str) -> int
             data={"name": app_name_on_sauce},
             auth=(os.getenv("SAUCE_USERNAME"), os.getenv("SAUCE_ACCESS_KEY")),
         )
+    r.raise_for_status()
     return r.status_code
 
 
 def applitoolsify(path_to_app, sdk):
-    os.chdir(Path(".").absolute().parent)
+    os.chdir(
+        os.environ.get("GITHUB_WORKSPACE", Path(__name__).absolute().parent.parent)
+    )
     os.environ["APPLITOOLSIFY_DEBUG"] = "True"
     output = subprocess.run(
         [
@@ -42,6 +45,7 @@ def applitoolsify(path_to_app, sdk):
         text=True,
         check=True,
     )
+    print(output)
     output.check_returncode()
 
 
@@ -49,7 +53,7 @@ def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
     applitoolsify(path_to_app, "ios_nmg")
 
     path_to_app_zip = f"{path_to_app}.zip"
-    app_name_on_sauce = "e2e_applitoolsify_test.app"
+    app_name_on_sauce = "e2e_applitoolsify_test.app.zip"
     Archiver.zip_dir(path_to_app, path_to_app_zip)
     upload_app_to_sauce(path_to_app_zip, app_name_on_sauce)
 

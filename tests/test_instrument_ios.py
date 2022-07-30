@@ -52,9 +52,7 @@ def test_instrument_ipa_no_signing_absolute_path(path_to_ipa, sdk, framework, tm
         zfile.extractall(str(tmpdir))
 
     assert os.path.exists(
-        os.path.join(
-            str(tmpdir), "Payload", "awesomeopensource.app", "Frameworks", framework
-        )
+        os.path.join(str(tmpdir), "Payload", "IOSTestApp.app", "Frameworks", framework)
     )
 
 
@@ -72,7 +70,5 @@ def test_instrument_ipa_no_signing_relative_path(path_to_ipa, sdk, framework, tm
         zfile.extractall(str(tmpdir))
 
     assert os.path.exists(
-        os.path.join(
-            str(tmpdir), "Payload", "awesomeopensource.app", "Frameworks", framework
-        )
+        os.path.join(str(tmpdir), "Payload", "IOSTestApp.app", "Frameworks", framework)
     )

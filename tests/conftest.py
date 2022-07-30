@@ -22,26 +22,26 @@ def get_resource(pth):
 @pytest.fixture()
 def path_to_app_zip(tmpdir):
     # type: (...) -> str
-    app_pth = get_resource_path("awesomeopensource.app.zip")
+    app_pth = get_resource_path("IOSTestApp.zip")
     shutil.copy2(app_pth, str(tmpdir))
-    return str(tmpdir.join("awesomeopensource.app.zip"))
+    return str(tmpdir.join("IOSTestApp.zip"))
 
 
 @pytest.fixture()
 def path_to_ipa(tmpdir):
     # type: (...) -> str
-    ipa_path = get_resource_path("awesomeopensource.ipa")
+    ipa_path = get_resource_path("IOSTestApp.ipa")
     shutil.copy2(ipa_path, str(tmpdir))
-    return str(tmpdir.join("awesomeopensource.ipa"))
+    return str(tmpdir.join("IOSTestApp.ipa"))
 
 
 @pytest.fixture()
 def path_to_app(tmpdir):
     # type: (...) -> str
-    pth = get_resource_path("awesomeopensource.app.zip")
+    pth = get_resource_path("IOSTestApp.zip")
     with zipfile.ZipFile(pth) as zfile:
         zfile.extractall(str(tmpdir))
-    return str(tmpdir.join("awesomeopensource.app"))
+    return str(tmpdir.join("IOSTestApp.app"))
 
 
 @pytest.fixture()
