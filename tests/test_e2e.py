@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 from pprint import pprint
 
 import requests
@@ -15,7 +16,7 @@ from applitools.common import (
 )
 from applitools.selenium import Eyes, VisualGridRunner
 
-from src.instrument import Archiver
+from src.instrument import Archiver, AndroidInstrumentifyStrategy
 
 
 def upload_app_to_sauce(path_to_app_archive: str, app_name_on_sauce: str) -> int:
@@ -31,7 +32,8 @@ def upload_app_to_sauce(path_to_app_archive: str, app_name_on_sauce: str) -> int
 
 
 def applitoolsify(path_to_app, sdk):
-    os.chdir(sys.path[0])  # switch to applitoolsify directory
+    work_dir = Path(sys.path[0])
+    os.chdir(work_dir)  # switch to applitoolsify directory
 
     os.environ["APPLITOOLSIFY_DEBUG"] = "True"
     output = subprocess.run(
@@ -49,6 +51,9 @@ def applitoolsify(path_to_app, sdk):
     output.check_returncode()
     if "Failed to instrument" in output.stdout:
         raise Exception(f"Failed to patch {path_to_app}")
+    if sdk == "android_nmg":
+        return work_dir.joinpath(AndroidInstrumentifyStrategy.ARTIFACT_DIR, "ready.apk")
+    return path_to_app
 
 
 def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
@@ -89,7 +94,7 @@ def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
 
 
 def test_applitoolsify_android_apk(path_to_apk, sauce_driver_url):
-    applitoolsify(path_to_apk, "android_nmg")
+    path_to_apk = applitoolsify(path_to_apk, "android_nmg")
 
     app_name_on_sauce = "e2e_applitoolsify_test.apk"
     upload_app_to_sauce(path_to_apk, app_name_on_sauce)
