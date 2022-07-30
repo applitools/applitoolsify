@@ -1,6 +1,6 @@
 import os
 import subprocess
-from pathlib import Path
+import sys
 from pprint import pprint
 
 import requests
@@ -31,9 +31,8 @@ def upload_app_to_sauce(path_to_app_archive: str, app_name_on_sauce: str) -> int
 
 
 def applitoolsify(path_to_app, sdk):
-    os.chdir(
-        os.environ.get("GITHUB_WORKSPACE", Path(__name__).absolute().parent.parent)
-    )
+    os.chdir(sys.path[0])  # switch to applitoolsify directory
+
     os.environ["APPLITOOLSIFY_DEBUG"] = "True"
     output = subprocess.run(
         [
