@@ -1,6 +1,7 @@
 import os
 import subprocess
 from pathlib import Path
+from pprint import pprint
 
 import requests
 from appium.webdriver import Remote
@@ -45,10 +46,11 @@ def applitoolsify(path_to_app, sdk):
         text=True,
         check=True,
     )
-    print(output)
+    pprint(output)
     output.check_returncode()
-    if output.stderr:
-        raise Exception("Failed to patch")
+    if "Failed to instrument" in output.stdout:
+        raise Exception(f"Failed to patch {path_to_app}")
+
 
 def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
     applitoolsify(path_to_app, "ios_nmg")
