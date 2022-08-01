@@ -75,7 +75,7 @@ SUPPORTED_FRAMEWORKS = {
     SdkParams.ios_nmg: SdkData(
         **{
             "name": "UFG_lib.xcframework",
-            "download_url": "https://applitools.jfrog.io/artifactory/ufg-mobile/UFG_lib.xcframework.zip",
+            "download_url": "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip",
         }
     ),
     SdkParams.ios_classic: SdkData(
