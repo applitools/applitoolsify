@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from pprint import pprint
 
-from src.instrument import AndroidInstrumentifyStrategy
+from src.instrument_strategies import AndroidInstrumentifyStrategy
 
 
 def applitoolsify_cmd(path_to_app, sdk):

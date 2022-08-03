@@ -16,7 +16,7 @@ __version__ = "0.1.0"
 
 
 def _run_from_local():
-    from src.instrument import run
+    from src.cli import run
 
     return run
 
