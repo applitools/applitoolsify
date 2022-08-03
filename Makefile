@@ -1,16 +1,4 @@
 build:
-	python setup.py sdist
-
-publish-test:
-	twine upload --verbose -r test dist/*
-
-publish-prod:
-	twine upload --verbose -r pypi dist/*
-
-clean:
-	rm -rf dist applitoolsify.egg-info
-
-build-publish:
-	$(MAKE) build
-	$(MAKE) publish-test
-	$(MAKE) clean
+	find src -name "__pycache__"|xargs rm -rf
+	find src -name "*.pyc"|xargs rm -rf
+	python -m zipapp src -o applitoolsify.pyz -m "src.cli:run"
