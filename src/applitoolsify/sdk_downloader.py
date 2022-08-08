@@ -5,10 +5,10 @@ from io import BytesIO
 from pathlib import Path
 from urllib.request import urlopen
 
-from .archiver import Archiver
-from .config import SUPPORTED_FRAMEWORKS
-from .entities import SdkData, SdkParams
-from .utils import print_verbose
+from applitoolsify.archiver import Archiver
+from applitoolsify.config import SUPPORTED_FRAMEWORKS
+from applitoolsify.entities import SdkData, SdkParams
+from applitoolsify.utils import print_verbose
 
 
 class SdkDownloadManager(object):

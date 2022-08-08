@@ -1,4 +1,4 @@
-from .config import VERBOSE
+from applitoolsify.config import VERBOSE
 
 
 def print_verbose(*args, **kwargs):

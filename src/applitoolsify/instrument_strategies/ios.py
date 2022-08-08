@@ -8,9 +8,9 @@ import traceback
 import zipfile
 from pathlib import Path
 
-from src.archiver import Archiver
-from src.config import VERBOSE
-from src.utils import print_verbose
+from applitoolsify.archiver import Archiver
+from applitoolsify.config import VERBOSE
+from applitoolsify.utils import print_verbose
 
 from .base import BaseInstrumentifyStrategy
 

@@ -1,4 +1,4 @@
-from .entities import SdkData, SdkParams
+from applitoolsify.entities import SdkData, SdkParams
 
 __version__ = "0.2.0"
 

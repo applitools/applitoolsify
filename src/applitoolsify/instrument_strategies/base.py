@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.entities import SdkData
+from applitoolsify.entities import SdkData
 
 
 class BaseInstrumentifyStrategy(object):

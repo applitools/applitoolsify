@@ -2,10 +2,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from .config import __version__
-from .entities import SdkParams
-from .instrumenter import Instrumenter
-from .sdk_downloader import SdkDownloadManager
+from applitoolsify.config import __version__
+from applitoolsify.entities import SdkParams
+from applitoolsify.instrumenter import Instrumenter
+from applitoolsify.sdk_downloader import SdkDownloadManager
 
 
 def validate_path_to_app(value):
