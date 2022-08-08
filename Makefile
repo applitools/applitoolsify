@@ -1,4 +1,4 @@
-build:
-	find src -name "__pycache__"|xargs rm -rf
-	find src -name "*.pyc"|xargs rm -rf
-	python -m zipapp src -o applitoolsify.pyz -m "src.cli:run"
+build-pyz:
+	find src -name "__pycache__" -delete
+	find src -name "*.pyc" -delete
+	python -m zipapp src -o applitoolsify.pyz -m "applitoolsify.cli:run"
