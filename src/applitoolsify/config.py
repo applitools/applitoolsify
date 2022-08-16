@@ -1,28 +1,24 @@
-from applitoolsify.entities import SdkData, SdkParams
-
-__version__ = "0.2.0"
-
+from enum import Enum
+from pathlib import Path
+from typing import Optional
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
 
-SUPPORTED_FRAMEWORKS = {
-    SdkParams.android_nmg: SdkData(
-        **{
-            "name": "NMG_lib",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib.zip",
-        }
-    ),
-    SdkParams.ios_nmg: SdkData(
-        **{
-            "name": "UFG_lib.xcframework",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip",
-        }
-    ),
-    SdkParams.ios_classic: SdkData(
-        **{
-            "name": "EyesiOSHelper.xcframework",
-            "download_url": "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip",
-        }
-    ),
-}
+
+class SdkParams(Enum):
+    ios_classic = "ios_classic"
+    ios_nmg = "ios_nmg"
+    android_nmg = "android_nmg"
+
+
+class SdkData:
+    """DTO with SDK data to download and extract."""
+
+    def __init__(self, name: str):
+        self.name = name
+        self.sdk_location: Optional[Path] = None
+
+    def add_sdk_location(self, path: Path) -> "SdkData":
+        self.sdk_location = path
+        return self

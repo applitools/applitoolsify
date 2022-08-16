@@ -8,10 +8,9 @@ import traceback
 import zipfile
 from pathlib import Path
 
-from applitoolsify.archiver import Archiver
-from applitoolsify.config import VERBOSE
-from applitoolsify.utils import print_verbose
-
+from .. import archiver
+from ..config import VERBOSE
+from ..utils import print_verbose
 from .base import BaseInstrumentifyStrategy
 
 
@@ -144,6 +143,6 @@ class IOSIpaInstrumentifyStrategy(BaseInstrumentifyStrategy):
         try:
             # Need to be in current folder to archive
             os.chdir(self.extracted_dir_path)
-            Archiver.zip_dir(".", self.path_to_app)
+            archiver.zip_dir(".", self.path_to_app)
         finally:
             os.chdir(old_path)

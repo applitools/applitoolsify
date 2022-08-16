@@ -1,4 +1,5 @@
 build-pyz:
 	find src -name "__pycache__" -delete
 	find src -name "*.pyc" -delete
-	python -m zipapp src -o applitoolsify.pyz -m "applitoolsify.cli:run"
+	#python downloader.py
+	python -m zipapp --compress src --main "applitoolsify.cli:run" --output applitoolsify.pyz

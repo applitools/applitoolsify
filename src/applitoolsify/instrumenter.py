@@ -2,13 +2,13 @@ import os
 import shutil
 from pathlib import Path
 
-from applitoolsify.entities import SdkData
-from applitoolsify.instrument_strategies import (
+from .config import SdkData
+from .instrument_strategies import (
     AndroidInstrumentifyStrategy,
     IOSAppInstrumentifyStrategy,
     IOSIpaInstrumentifyStrategy,
 )
-from applitoolsify.utils import print_verbose
+from .utils import print_verbose
 
 
 class Instrumenter(object):

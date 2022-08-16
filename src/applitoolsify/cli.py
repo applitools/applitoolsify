@@ -2,10 +2,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from applitoolsify.config import __version__
-from applitoolsify.entities import SdkParams
-from applitoolsify.instrumenter import Instrumenter
-from applitoolsify.sdk_downloader import SdkDownloadManager
+from applitoolsify import sdk_manager
+
+from .__version__ import __version__
+from .config import SdkParams
+from .instrumenter import Instrumenter
 
 
 def validate_path_to_app(value):
@@ -29,9 +30,10 @@ def cli_parser():
 
     parser = argparse.ArgumentParser(
         prog="python applitoolsify.py",
-        description="Applitoolsify (v{}) with UFG_lib or EyesiOSHelper SDK.".format(
-            __version__
-        ),
+        description="Applitoolsify (v{}) "
+        "- UFG_lib 2.0.89 "
+        "- EyesiOSHelper 2.0.1 "
+        "- NMG_lib ???".format(__version__),
         add_help=False,
     )
     # options
@@ -83,7 +85,7 @@ def run():
 
     print("Instrumentation start")
     print("Getting assets...")
-    with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
+    with sdk_manager.from_sdk_name(args.sdk) as sdk_data:
         instrumenter = Instrumenter(
             args.path_to_app,
             sdk_data,
