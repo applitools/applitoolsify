@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 from pprint import pprint
 
-from src.instrument_strategies import AndroidInstrumentifyStrategy
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+
+from applitoolsify.instrument_strategies import AndroidInstrumentifyStrategy
 
 
 def applitoolsify_cmd(path_to_app, sdk):
@@ -12,11 +14,14 @@ def applitoolsify_cmd(path_to_app, sdk):
     work_dir = Path(sys.path[0])
     os.chdir(work_dir)  # switch to applitoolsify directory
 
-    os.environ["APPLITOOLSIFY_DEBUG"] = "True"
+    cmd = "applitoolsify.pyz"
+    if not Path(cmd).exists():
+        output = subprocess.run(["make", "build-pyz"])
+
     output = subprocess.run(
         [
             "python",
-            "applitoolsify.py",
+            cmd,
             str(path_to_app),
             sdk,
         ],

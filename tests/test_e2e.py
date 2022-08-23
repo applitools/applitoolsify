@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+
 from appium.webdriver import Remote
 from applitools.common import (
     AndroidDeviceInfo,
@@ -9,7 +12,8 @@ from applitools.common import (
 )
 from applitools.selenium import Eyes, VisualGridRunner
 
-from src.instrument import Archiver
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+from applitoolsify import archiver
 from tests.utils import applitoolsify_cmd, upload_app_to_sauce
 
 
@@ -18,7 +22,7 @@ def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
 
     path_to_app_zip = f"{path_to_app}.zip"
     app_name_on_sauce = "e2e_applitoolsify_test.app.zip"
-    Archiver.zip_dir(path_to_app, path_to_app_zip)
+    archiver.zip_dir(path_to_app, path_to_app_zip)
     upload_app_to_sauce(path_to_app_zip, app_name_on_sauce)
 
     caps = {
