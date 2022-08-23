@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 from pathlib import Path
 
 from .base import BaseInstrumentifyStrategy
@@ -25,12 +26,16 @@ class AndroidInstrumentifyStrategy(BaseInstrumentifyStrategy):
         print("Preparing application...")
         # os.chdir is required because we want to create our directories under applitoolsify NMG_lib dir
         # but still allow them to run in standalone mode
+        instrumentation_folder = self.sdk_data.sdk_location.parent
         os.chdir(self.sdk_data.sdk_location)
         work_dir = Path(os.getcwd())
+
         # Prepare output directory
-        artifact_dir = work_dir.parent.joinpath(self.ARTIFACT_DIR)
+        artifact_dir = instrumentation_folder.parent.joinpath(self.ARTIFACT_DIR)
         artifact_dir.mkdir(parents=True, exist_ok=True)
-        # This is the module we downloaded, see source in injection
+
+        # Import module that handels injection
+        sys.path.insert(0, str(instrumentation_folder))
         import NMG_lib
 
         log_loc = work_dir.joinpath("android-nmg.log")
