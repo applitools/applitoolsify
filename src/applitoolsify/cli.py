@@ -44,7 +44,7 @@ def cli_parser():
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s {}".format(__version__),
+        version=make_description(),
         help=argparse.SUPPRESS,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
