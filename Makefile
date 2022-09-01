@@ -1,16 +1,70 @@
-build:
-	python setup.py sdist
+###########
+# Aliases #
+###########
 
-publish-test:
-	twine upload --verbose -r test dist/*
+build: build.pyz
 
-publish-prod:
-	twine upload --verbose -r pypi dist/*
+
+###################
+# Common commands #
+###################
+
+
+# Clean cached files
+#
+# Usage:
+#	make clean
 
 clean:
-	rm -rf dist applitoolsify.egg-info
+	find src -name "__pycache__" -delete
+	find src -name "*.pyc" -delete
 
-build-publish:
-	$(MAKE) build
-	$(MAKE) publish-test
-	$(MAKE) clean
+
+
+##################
+# Build commands #
+##################
+
+# Install required packages for build.
+#
+# Usage:
+#	make download.sdk
+
+install.build:
+	pip install dohq-artifactory
+
+# Download Applitools SKDs.
+#
+# Usage:
+#	make download.sdk
+download.sdk:
+	python build.py --download
+
+
+# Build applitoolsify.pyz.
+#
+# Usage:
+#	make build.pyz
+build.pyz: clean install.build download.sdk
+	mkdir -p dist
+	python -m zipapp --compress src --main "applitoolsify.cli:run" --output dist/applitoolsify.pyz
+
+####################
+# Release commands #
+####################
+
+# Install required packages for release.
+#
+# Usage:
+#	make install.release
+
+install.release:
+	pip install bumpversion
+
+# Show SDKs included version
+#
+# Usage:
+#	make sdk.version
+
+update.readme: download.sdk
+	python build.py --update-readme

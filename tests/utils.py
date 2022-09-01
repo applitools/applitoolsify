@@ -1,10 +1,15 @@
 import os
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from pprint import pprint
 
-from src.instrument import AndroidInstrumentifyStrategy
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+
+from applitoolsify.instrument_strategies import (  # noqa: E402
+    AndroidInstrumentifyStrategy,
+)
 
 
 def applitoolsify_cmd(path_to_app, sdk):
@@ -12,11 +17,10 @@ def applitoolsify_cmd(path_to_app, sdk):
     work_dir = Path(sys.path[0])
     os.chdir(work_dir)  # switch to applitoolsify directory
 
-    os.environ["APPLITOOLSIFY_DEBUG"] = "True"
     output = subprocess.run(
         [
             "python",
-            "applitoolsify.py",
+            "applitoolsify.pyz",
             str(path_to_app),
             sdk,
         ],
@@ -45,3 +49,15 @@ def upload_app_to_sauce(path_to_app_archive: str, app_name_on_sauce: str) -> int
         )
     r.raise_for_status()
     return r.status_code
+
+
+def zip_dir(dirpath, zippath):
+    with zipfile.ZipFile(zippath, "w", zipfile.ZIP_DEFLATED) as zfile:
+        for root, dirs, files in os.walk(dirpath):
+            if os.path.basename(root)[0] == ".":
+                continue  # skip hidden directories
+            for f in files:
+                if f[-1] == "~" or (f[0] == "." and f != ".htaccess"):
+                    # skip backup files and all hidden files except .htaccess
+                    continue
+                zfile.write(os.path.join(root, f))

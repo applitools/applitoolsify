@@ -1,11 +1,31 @@
-name: Test that applitoolsify works on multiple platorms and Python versions
+name: Test on platforms
 on: push
 jobs:
+  dist-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{inputs.ref || github.ref}}
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.7"
+
+      - name: Build packages
+        working-directory: "."
+        run: make build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: "applitoolsify.pyz"
+          if-no-files-found: error
+          path: "dist/"
+
   check-patching-android:
+    needs: dist-build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: [ubuntu-latest, macOS-latest]
         python-version: ["3.7", "3.10"]
     steps:
       - name: Set the LongPathsEnabled on Windows
@@ -30,11 +50,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest==6.2.5
 
+      - uses: actions/download-artifact@v3
+        with:
+          name: applitoolsify.pyz
+
       - name: Run tests
         if: ${{ !failure() }}
+        working-directory: "."
         run: pytest tests/test_instrument_android.py
 
   check-patching-ios:
+    needs: dist-build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -58,11 +84,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest==6.2.5
 
+      - uses: actions/download-artifact@v3
+        with:
+          name: applitoolsify.pyz
+
       - name: Run tests
         if: ${{ !failure() }}
+        working-directory: "."
         run: pytest tests/test_instrument_ios.py
 
   check-e2e:
+    needs: dist-build
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python
@@ -84,10 +116,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest==6.2.5 pytest-xdist==2.5.0 eyes_selenium==5.9.0 requests==2.28
 
+      - uses: actions/download-artifact@v3
+        with:
+          name: applitoolsify.pyz
+
       - name: Run tests
         if: ${{ !failure() }}
         env:
           SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
           APPLITOOLS_API_KEY: ${{ secrets.APPLITOOLS_API_KEY }}
+        working-directory: "."
         run: pytest -n2 tests/test_e2e.py
