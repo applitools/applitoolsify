@@ -38,7 +38,7 @@ install.build:
 # Usage:
 #	make download.sdk
 download.sdk:
-	python downloader.py
+	python build.py --download
 
 
 # Build applitoolsify.pyz.
@@ -61,3 +61,10 @@ build.pyz: clean install.build download.sdk
 install.release:
 	pip install bumpversion
 
+# Show SDKs included version
+#
+# Usage:
+#	make sdk.version
+
+update.readme:
+	python dist/applitoolsify.pyz --version

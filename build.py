@@ -1,4 +1,6 @@
+import argparse
 import dataclasses
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import md5
 from pathlib import Path
@@ -67,5 +69,30 @@ def download_and_extract_sdks():
         executor.map(lambda s: s.download(), SUPPORTED_FRAMEWORKS)
 
 
+def cli_parser():
+    # type: () -> argparse.ArgumentParser
+    parser = argparse.ArgumentParser(
+        prog="python build.py",
+        add_help=False,
+    )
+
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Download SDKs to local folder",
+    )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+    return parser
+
+
+def run():
+    args = cli_parser().parse_args()
+    if args.download:
+        download_and_extract_sdks()
+
+
 if __name__ == "__main__":
-    download_and_extract_sdks()
+    run()
