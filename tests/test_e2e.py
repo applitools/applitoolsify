@@ -1,6 +1,3 @@
-import sys
-from pathlib import Path
-
 from appium.webdriver import Remote
 from applitools.common import (
     AndroidDeviceInfo,

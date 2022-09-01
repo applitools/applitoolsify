@@ -34,7 +34,7 @@ class AndroidInstrumentifyStrategy(BaseInstrumentifyStrategy):
         artifact_dir = instrumentation_folder.parent.joinpath(self.ARTIFACT_DIR)
         artifact_dir.mkdir(parents=True, exist_ok=True)
 
-        # Import module that handels injection
+        # Import module that handles injection
         sys.path.insert(0, str(instrumentation_folder))
         import NMG_lib
 

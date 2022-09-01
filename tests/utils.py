@@ -19,7 +19,7 @@ def applitoolsify_cmd(path_to_app, sdk):
 
     cmd = "applitoolsify.pyz"
     if not Path(cmd).exists():
-        output = subprocess.run(["make", "build-pyz"])
+        subprocess.run(["make"])
 
     output = subprocess.run(
         [
