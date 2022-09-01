@@ -48,3 +48,16 @@ download.sdk:
 build.pyz: clean install.build download.sdk
 	mkdir -p dist
 	python -m zipapp --compress src --main "applitoolsify.cli:run" --output dist/applitoolsify.pyz
+
+####################
+# Release commands #
+####################
+
+# Install required packages for release.
+#
+# Usage:
+#	make install.release
+
+install.release:
+	pip install bumpversion
+
