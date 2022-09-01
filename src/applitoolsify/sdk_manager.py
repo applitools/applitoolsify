@@ -16,7 +16,7 @@ SDK_NAME_TO_SDK_PARAM = {
     "EyesiOSHelper.xcframework": SdkParams.ios_classic,
 }
 
-EXTRACTED_SDK_DIR = Path(sys.path[0]).parent / "instrumentation"
+EXTRACTED_SDK_DIR = Path(sys.path[0]).parent.joinpath("instrumentation").absolute()
 
 
 def supported_frameworks_from_resources() -> Dict[SdkParams, SdkData]:

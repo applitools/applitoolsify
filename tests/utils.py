@@ -17,14 +17,10 @@ def applitoolsify_cmd(path_to_app, sdk):
     work_dir = Path(sys.path[0])
     os.chdir(work_dir)  # switch to applitoolsify directory
 
-    cmd = "applitoolsify.pyz"
-    if not Path(cmd).exists():
-        subprocess.run(["make"])
-
     output = subprocess.run(
         [
             "python",
-            cmd,
+            "applitoolsify.pyz",
             str(path_to_app),
             sdk,
         ],
