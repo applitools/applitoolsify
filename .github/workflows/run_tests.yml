@@ -19,7 +19,7 @@ jobs:
 
       - name: Build packages
         working-directory: "."
-        run: make build-pyz
+        run: make build
       - uses: actions/upload-artifact@v3
         with:
           name: "applitoolsify.pyz"
