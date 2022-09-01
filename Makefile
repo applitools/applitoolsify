@@ -25,11 +25,26 @@ clean:
 # Build commands #
 ##################
 
+# Install required packages for build.
+#
+# Usage:
+#	make download.sdk
+
+install.build:
+	pip install dohq-artifactory
+
+# Download Applitools SKDs.
+#
+# Usage:
+#	make download.sdk
+download.sdk:
+	python downloader.py
+
+
 # Build applitoolsify.pyz.
 #
 # Usage:
-#	make build.pyz [download=(yes|no)]
-build.pyz: clean
-	$(if $(call eq,$(download),no),,python downloader.py)
+#	make build.pyz
+build.pyz: clean install.build download.sdk
 	mkdir -p dist
 	python -m zipapp --compress src --main "applitoolsify.cli:run" --output dist/applitoolsify.pyz
