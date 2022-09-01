@@ -30,13 +30,13 @@ def supported_frameworks_from_resources() -> Dict[SdkParams, SdkData]:
     return result
 
 
-SUPPORTED_FRAMEWORKS = supported_frameworks_from_resources()
+AVAILABLE_FRAMEWORKS = supported_frameworks_from_resources()
 
 
 @contextlib.contextmanager
 def from_sdk_name(sdk_name: str) -> SdkData:
     sdk = SdkParams(sdk_name)
-    sdk_data = SUPPORTED_FRAMEWORKS[sdk]
+    sdk_data = AVAILABLE_FRAMEWORKS[sdk]
     sdk_data.add_sdk_location(EXTRACTED_SDK_DIR.joinpath(sdk_data.name))
 
     data = importlib.resources.read_binary("SDKS", sdk_data.filename)

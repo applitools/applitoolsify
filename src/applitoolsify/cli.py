@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from applitoolsify import sdk_manager
-from applitoolsify.sdk_manager import SUPPORTED_FRAMEWORKS
+from applitoolsify.sdk_manager import AVAILABLE_FRAMEWORKS
 
 from .__version__ import __version__
 from .config import SdkParams
@@ -28,8 +28,8 @@ def validate_path_to_app(value):
 
 def make_description() -> str:
     desc = "Applitoolsify (v{}) ".format(__version__)
-    for sdk in SUPPORTED_FRAMEWORKS.values():
-        desc += f"- {sdk.name} ({sdk.version[:-4]}) "
+    for sdk in AVAILABLE_FRAMEWORKS.values():
+        desc += f"- {sdk.name} ({sdk.version}) "
     return desc
 
 

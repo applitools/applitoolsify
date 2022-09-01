@@ -66,5 +66,5 @@ install.release:
 # Usage:
 #	make sdk.version
 
-update.readme:
-	python dist/applitoolsify.pyz --version
+update.readme: download.sdk
+	python build.py --update-readme
