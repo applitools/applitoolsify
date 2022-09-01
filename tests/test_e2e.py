@@ -12,9 +12,7 @@ from applitools.common import (
 )
 from applitools.selenium import Eyes, VisualGridRunner
 
-sys.path.append(str(Path(__file__).parent.parent / "src"))
-from applitoolsify import archiver
-from tests.utils import applitoolsify_cmd, upload_app_to_sauce
+from tests.utils import applitoolsify_cmd, upload_app_to_sauce, zip_dir
 
 
 def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
@@ -22,7 +20,7 @@ def test_applitoolsify_ios_app(path_to_app, sauce_driver_url):
 
     path_to_app_zip = f"{path_to_app}.zip"
     app_name_on_sauce = "e2e_applitoolsify_test.app.zip"
-    archiver.zip_dir(path_to_app, path_to_app_zip)
+    zip_dir(path_to_app, path_to_app_zip)
     upload_app_to_sauce(path_to_app_zip, app_name_on_sauce)
 
     caps = {
