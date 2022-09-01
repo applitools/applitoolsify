@@ -7,7 +7,9 @@ from pprint import pprint
 
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from applitoolsify.instrument_strategies import AndroidInstrumentifyStrategy
+from applitoolsify.instrument_strategies import (  # noqa: E402
+    AndroidInstrumentifyStrategy,
+)
 
 
 def applitoolsify_cmd(path_to_app, sdk):
