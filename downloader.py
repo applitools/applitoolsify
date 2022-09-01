@@ -1,8 +1,7 @@
 import dataclasses
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.request import urlopen
-
-from tqdm import tqdm
 
 CUR_DIR = Path(__file__).parent.absolute()
 SDKS_DIR_PATH = CUR_DIR / "src" / "SDKS"
@@ -34,11 +33,17 @@ SUPPORTED_FRAMEWORKS = [
 ]
 
 
+def downloader(sdk_data: SdkDownloadData):
+    print(f"* Downloading {sdk_data.name}")
+    with urlopen(sdk_data.download_url) as zipresp:
+        with open(SDKS_DIR_PATH / sdk_data.name, "wb") as f:
+            f.write(zipresp.read())
+    print(f"{sdk_data.name} was downloaded!")
+
+
 def download_and_extract_sdks():
-    for sdk_data in tqdm(SUPPORTED_FRAMEWORKS):
-        with urlopen(sdk_data.download_url) as zipresp:
-            with open(SDKS_DIR_PATH / sdk_data.name, "wb") as f:
-                f.write(zipresp.read())
+    with ThreadPoolExecutor() as executor:
+        executor.map(downloader, SUPPORTED_FRAMEWORKS)
 
 
 if __name__ == "__main__":
