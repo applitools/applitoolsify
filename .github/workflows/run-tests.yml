@@ -1,4 +1,4 @@
-name: Test that applitoolsify works on multiple platorms and Python versions
+name: Test on platforms
 on: push
 jobs:
   dist-build:
