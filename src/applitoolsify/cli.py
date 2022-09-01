@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from applitoolsify import sdk_manager
+from applitoolsify.sdk_manager import SUPPORTED_FRAMEWORKS
 
 from .__version__ import __version__
 from .config import SdkParams
@@ -25,15 +26,18 @@ def validate_path_to_app(value):
     return True
 
 
+def make_description() -> str:
+    desc = "Applitoolsify (v{}) ".format(__version__)
+    for sdk in SUPPORTED_FRAMEWORKS.values():
+        desc += f"- {sdk.name} ({sdk.version[:-4]}) "
+    return desc
+
+
 def cli_parser():
     # type: () -> argparse.ArgumentParser
-
     parser = argparse.ArgumentParser(
         prog="python applitoolsify.py",
-        description="Applitoolsify (v{}) "
-        "- UFG_lib 2.0.89 "
-        "- EyesiOSHelper 2.0.1 "
-        "- NMG_lib ???".format(__version__),
+        description=make_description(),
         add_help=False,
     )
     # options
