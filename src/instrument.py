@@ -69,7 +69,7 @@ SUPPORTED_FRAMEWORKS = {
     SdkParams.android_nmg: SdkData(
         **{
             "name": "NMG_lib",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib.zip",
+            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib-gdf27f78.zip",
         }
     ),
     SdkParams.ios_nmg: SdkData(
@@ -199,7 +199,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
         log_loc = work_dir.joinpath("android-nmg.log")
         log_tgt = artifact_dir.joinpath("android-nmg.log")
         try:
-            out_dir = NMG_lib.patchnfill.run(self.path_to_app)
+            out_dir = NMG_lib.main.run(self.path_to_app)
             apk_loc = (
                 Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk")
             )
