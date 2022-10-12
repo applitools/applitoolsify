@@ -7,6 +7,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         python-version: ["3.7", "3.10"]
+      fail-fast: false
     steps:
       - name: Set the LongPathsEnabled on Windows
         if: runner.os == 'Windows'
@@ -40,6 +41,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         python-version: ["3.7", "3.10"]
+      fail-fast: false
     steps:
       - name: Set the LongPathsEnabled on Windows
         if: runner.os == 'Windows'
