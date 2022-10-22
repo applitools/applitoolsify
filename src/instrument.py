@@ -186,6 +186,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
     def instrumentify(self):
         # type: () -> bool
         print("Preparing application...")
+        cur_path = Path(os.getcwd())
         # os.chdir is required because we want to create our directories under applitoolsify NMG_lib dir
         # but still allow them to run in standalone mode
         os.chdir(self.sdk_data.sdk_location)
@@ -195,32 +196,31 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
         artifact_dir.mkdir(parents=True, exist_ok=True)
         # This is the module we downloaded, see source in injection
         import NMG_lib
-
-        log_loc = work_dir.joinpath("android-nmg.log")
+        # Get log location from nmg library, after import this file should
+        # exist because logger creates it when loaded
+        log_loc = NMG_lib.common.env.LOG_LOCATION
         log_tgt = artifact_dir.joinpath("android-nmg.log")
+        out_dir = ""
         try:
             out_dir = NMG_lib.main.run(self.path_to_app)
-            apk_loc = (
-                Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk")
-            )
-
         except Exception as e:
+            # next line should not happen unless a bug occurs, but leave for safe practice
+            # in production
             # sometimes log file doesn't present which raise an exception during copying
             if log_loc.exists():
                 shutil.copyfile(log_loc, log_tgt)
-                print(
-                    f"Instrumentation failed with error: {e}. Please submit `{log_tgt}` to applitools"
-                )
+                print(f"Instrumentation failed with error: {e}. Please submit `{log_tgt}` to applitools")
             else:
                 print(f"Instrumentation failed with error: {e}. No log file")
             return False
-        # all jazz below is just to rename the original outputs from our code to a proper artifacts directory
-        # (it used to be much more complicated (; )
 
-        shutil.copyfile(log_loc, log_tgt)
+        apk_loc = (Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk"))
         print("Collecting artifacts")
+        shutil.copyfile(log_loc, log_tgt)
         target_file = artifact_dir.joinpath("ready.apk")
         ret = shutil.move(apk_loc, target_file)
+        del NMG_lib
+        os.chdir(cur_path)
         return ret == target_file
 
 
