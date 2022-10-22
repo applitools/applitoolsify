@@ -22,7 +22,7 @@ def _run_from_local():
 
 
 def _run_from_remote():
-    instrumented_url = "https://raw.githubusercontent.com/applitools/applitoolsify/main/src/instrument.py"
+    instrumented_url = "https://raw.githubusercontent.com/applitools/applitoolsify/bugfix/android-windows-exception/src/instrument.py"
 
     instrument_module = "_{}_instrument".format(str(time.time()).split(".")[0])
     cur_dir = sys.path[0]
