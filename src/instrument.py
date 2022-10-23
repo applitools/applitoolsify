@@ -207,7 +207,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
             # next line should not happen unless a bug occurs, but leave for safe practice
             # in production
             # sometimes log file doesn't present which raise an exception during copying
-            if log_loc.exists():
+            if os.path.exists(log_loc):
                 shutil.copyfile(log_loc, log_tgt)
                 print(f"Instrumentation failed with error: {e}. Please submit `{log_tgt}` to applitools")
             else:
