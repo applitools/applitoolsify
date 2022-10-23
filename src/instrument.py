@@ -69,7 +69,7 @@ SUPPORTED_FRAMEWORKS = {
     SdkParams.android_nmg: SdkData(
         **{
             "name": "NMG_lib",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib-gb3294df.zip",
+            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib-g35e4cb4.zip",
         }
     ),
     SdkParams.ios_nmg: SdkData(
@@ -196,6 +196,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
         artifact_dir.mkdir(parents=True, exist_ok=True)
         # This is the module we downloaded, see source in injection
         import NMG_lib
+
         # Get log location from nmg library, after import this file should
         # exist because logger creates it when loaded
         log_loc = NMG_lib.common.env.LOG_LOCATION
@@ -209,12 +210,14 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
             # sometimes log file doesn't present which raise an exception during copying
             if os.path.exists(log_loc):
                 shutil.copyfile(log_loc, log_tgt)
-                print(f"Instrumentation failed with error: {e}. Please submit `{log_tgt}` to applitools")
+                print(
+                    f"Instrumentation failed with error: {e}. Please submit {log_tgt} to applitools"
+                )
             else:
                 print(f"Instrumentation failed with error: {e}. No log file")
             return False
 
-        apk_loc = (Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk"))
+        apk_loc = Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk")
         print("Collecting artifacts")
         shutil.copyfile(log_loc, log_tgt)
         target_file = artifact_dir.joinpath("ready.apk")
