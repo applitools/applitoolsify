@@ -26,9 +26,9 @@ def validate_path_to_app(value):
     if not path.exists():
         print("! Path `{}` does not exist".format(value))
         return False
-    if path.suffix not in [".app", ".ipa", ".apk"]:
+    if path.suffix not in [".app", ".ipa"]:
         print(
-            "! Supported only `*.app`, `*.ipa` or `*.apk` apps. You provided: `{}`".format(
+            "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(
                 value
             )
         )
@@ -44,7 +44,6 @@ def print_verbose(*args, **kwargs):
 class SdkParams(Enum):
     ios_classic = "ios_classic"
     ios_nmg = "ios_nmg"
-    android_nmg = "android_nmg"
 
 
 class SdkData(object):
@@ -66,12 +65,6 @@ class SdkData(object):
 
 
 SUPPORTED_FRAMEWORKS = {
-    SdkParams.android_nmg: SdkData(
-        **{
-            "name": "NMG_lib",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib-1.0.100-g4a58975.zip",
-        }
-    ),
     SdkParams.ios_nmg: SdkData(
         **{
             "name": "UFG_lib.xcframework",
@@ -94,7 +87,7 @@ class SdkDownloadManager(object):
         # type: (SdkData) -> None
         self.sdk_data = sdk_data
         # TODO: change it to tmp?
-        self.sdks_dir = Path(sys.path[0])  # curr dir
+        self.sdks_dir = Path(os.getcwd())  # curr dir
         self.sdk_data.add_sdk_location(self.sdks_dir.joinpath(self.sdk_data.name))
 
     @classmethod
@@ -166,65 +159,6 @@ class _InstrumentifyStrategy(object):
     def instrumentify(self):
         # type: () -> bool
         raise NotImplementedError
-
-
-class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
-    """
-    Patch Android `apk` with default SDK (XXX: Support multiple sdks).
-
-    This is a very basic implementation essentially calling the main
-    script for android injector provided in the zip file
-    """
-
-    ARTIFACT_DIR = "instrumented-apk"
-
-    @property
-    def app_frameworks(self):
-        # Not used for android, kept bc required
-        return self.path_to_app.joinpath("Frameworks")
-
-    def instrumentify(self):
-        # type: () -> bool
-        print("Preparing application...")
-        cur_path = Path(os.getcwd())
-        # os.chdir is required because we want to create our directories under applitoolsify NMG_lib dir
-        # but still allow them to run in standalone mode
-        os.chdir(self.sdk_data.sdk_location)
-        work_dir = Path(os.getcwd())
-        # Prepare output directory
-        artifact_dir = work_dir.parent.joinpath(self.ARTIFACT_DIR)
-        artifact_dir.mkdir(parents=True, exist_ok=True)
-        # This is the module we downloaded, see source in injection
-        import NMG_lib
-
-        # Get log location from nmg library, after import this file should
-        # exist because logger creates it when loaded
-        log_loc = NMG_lib.common.env.LOG_LOCATION
-        log_tgt = artifact_dir.joinpath("android-nmg.log")
-        out_dir = ""
-        try:
-            out_dir = NMG_lib.main.run(self.path_to_app)
-        except Exception as e:
-            # next line should not happen unless a bug occurs, but leave for safe practice
-            # in production
-            # sometimes log file doesn't present which raise an exception during copying
-            if os.path.exists(log_loc):
-                shutil.copyfile(log_loc, log_tgt)
-                print(
-                    f"Instrumentation failed with error: {e}. Please submit {log_tgt} to applitools"
-                )
-            else:
-                print(f"Instrumentation failed with error: {e}. No log file")
-            return False
-
-        apk_loc = Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk")
-        print("Collecting artifacts")
-        shutil.copyfile(log_loc, log_tgt)
-        target_file = artifact_dir.joinpath("ready.apk")
-        ret = shutil.move(apk_loc, target_file)
-        del NMG_lib
-        os.chdir(cur_path)
-        return ret == target_file
 
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -438,7 +372,6 @@ class Instrumenter(object):
     instrument_strategies = {
         "app": IOSAppPatcherInstrumentifyStrategy,
         "ipa": IOSIpaInstrumentifyStrategy,
-        "apk": AndroidInstrumentifyStrategy,
     }
 
     def __init__(
@@ -469,9 +402,7 @@ class Instrumenter(object):
 
     def instrumentify(self):
         # type: () -> bool
-        # Obviously need refactoring
-        android = self.app_ext.lstrip(".") == "apk"
-        if not android and self.was_already_instrumented():
+        if self.was_already_instrumented():
             print_verbose("App already instrumented. Updating...")
             # remove old installation
             shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
@@ -483,18 +414,11 @@ class Instrumenter(object):
                 self.sdk_data.name, self._instrumenter.sdk_in_app_frameworks
             )
         )
-        if android:
-            print(
-                "Application is ready at {}".format(
-                    AndroidInstrumentifyStrategy.ARTIFACT_DIR + os.sep + "ready.apk"
-                )
+        print(
+            "`{}` is ready for use with the `{}`".format(
+                self.path_to_app, self.sdk_data.name
             )
-        else:
-            print(
-                "`{}` is ready for use with the `{}`".format(
-                    self.path_to_app, self.sdk_data.name
-                )
-            )
+        )
         return True
 
 
@@ -521,7 +445,7 @@ def cli_parser():
     parser.add_argument(
         "path_to_app",
         type=str,
-        help="Path to the `.app`, `.ipa` or `.apk` for applitoolsify",
+        help="Path to the `.app` or `.ipa` for applitoolsify",
     )
     parser.add_argument(
         "sdk",
