@@ -4,8 +4,6 @@ import sys
 from pathlib import Path
 from pprint import pprint
 
-from src.instrument import AndroidInstrumentifyStrategy
-
 
 def applitoolsify_cmd(path_to_app, sdk):
     # type: (Path | str, str) -> Path
@@ -28,8 +26,6 @@ def applitoolsify_cmd(path_to_app, sdk):
     output.check_returncode()
     if "Failed to instrument" in output.stdout:
         raise Exception(f"Failed to patch {path_to_app}")
-    if sdk == "android_nmg":
-        return work_dir.joinpath(AndroidInstrumentifyStrategy.ARTIFACT_DIR, "ready.apk")
     return path_to_app
 
 

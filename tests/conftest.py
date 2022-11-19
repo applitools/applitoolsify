@@ -66,25 +66,6 @@ def path_to_ipa_relative_to_applitoolsify() -> str:
         os.remove(dst)
 
 
-@pytest.fixture()
-def path_to_apk_relative_to_applitoolsify() -> str:
-    pth = get_resource_path("eyes-android-hello-world.apk")
-    dst = here.parent / "eyes-android-hello-world.apk"
-    try:
-        shutil.copy2(pth, dst)
-        os.chdir(here.parent)
-        yield "eyes-android-hello-world.apk"
-    finally:
-        os.remove(dst)
-
-
-@pytest.fixture()
-def path_to_apk(tmpdir) -> Path:
-    app_pth = get_resource_path("eyes-android-hello-world.apk")
-    shutil.copy2(app_pth, str(tmpdir))
-    return Path(tmpdir.join("eyes-android-hello-world.apk"))
-
-
 @pytest.fixture
 def sauce_driver_url() -> str:
     return "https://{}:{}@ondemand.saucelabs.com:443/wd/hub".format(
