@@ -49,11 +49,12 @@ class SdkParams(Enum):
 class SdkData(object):
     """DTO with SDK data to download and extract."""
 
-    def __init__(self, name, download_url):
-        # type: (str, str) -> None
+    def __init__(self, name, download_url, local_url):
+        # type: (str, str, str) -> None
         self.name = name
         self.download_url = download_url
         self.sdk_location = None  # type: Path | None
+        self.local_url = local_url
 
     def __str__(self):
         return "SdkData<{}>".format(self.name)
@@ -69,12 +70,14 @@ SUPPORTED_FRAMEWORKS = {
         **{
             "name": "UFG_lib.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip",
+            "local_url": f"file://{os.getcwd()}/UFG_lib.xcframework.zip",
         }
     ),
     SdkParams.ios_classic: SdkData(
         **{
             "name": "EyesiOSHelper.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip",
+            "local_url": f"file://{os.getcwd()}/EyesiOSHelper.zip",
         }
     ),
 }
@@ -83,23 +86,23 @@ SUPPORTED_FRAMEWORKS = {
 class SdkDownloadManager(object):
     """Download and extract selected SDK."""
 
-    def __init__(self, sdk_data):
-        # type: (SdkData) -> None
+    def __init__(self, sdk_data, local):
+        # type: (SdkData, bool) -> None
         self.sdk_data = sdk_data
-        # TODO: change it to tmp?
+        self.local = local
         self.sdks_dir = Path(os.getcwd())  # curr dir
         self.sdk_data.add_sdk_location(self.sdks_dir.joinpath(self.sdk_data.name))
 
     @classmethod
-    def from_sdk_name(cls, sdk_name):
-        # type: (str) -> SdkDownloadManager
+    def from_sdk_name(cls, sdk_name, local):
+        # type: (str, bool) -> SdkDownloadManager
         sdk = SdkParams(sdk_name)
         sdk_data = SUPPORTED_FRAMEWORKS[sdk]
-        return cls(sdk_data)
+        return cls(sdk_data, local)
 
     def __enter__(self):
         # type: () -> SdkData
-        return self.download_and_extract()
+        return self.download_and_extract(self.local)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.remove_sdk_data()
@@ -107,8 +110,8 @@ class SdkDownloadManager(object):
     def remove_sdk_data(self):
         shutil.rmtree(self.sdk_data.sdk_location)
 
-    def download_and_extract(self):
-        # type: () -> SdkData
+    def download_and_extract(self, local):
+        # type: (bool) -> SdkData
         if self.sdk_data.sdk_location.exists():
             print_verbose(
                 "We've detected saved version of `{}` in `{}`".format(
@@ -121,8 +124,13 @@ class SdkDownloadManager(object):
                 self.sdk_data.name, self.sdk_data.sdk_location
             )
         )
+            
+        uri = self.sdk_data.local_url
+        if not local:
+            uri = self.sdk_data.download_url
+
         # always download latest sdk
-        with urlopen(self.sdk_data.download_url) as zipresp:
+        with urlopen(uri) as zipresp:
             with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
                 extracted_path = Archiver.extract_specific_folder(
                     self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
@@ -138,11 +146,12 @@ class _InstrumentifyStrategy(object):
     """Base Patch Strategy class. Helps to instrumentify app with specific SDK."""
 
     def __init__(
-        self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
+        self, path_to_app, sdk_data, local, signing_certificate_name, provisioning_profile
     ):
-        # type: (Path, SdkData, str, str) -> None
+        # type: (Path, SdkData, bool, str, str) -> None
         self.path_to_app = path_to_app
         self.sdk_data = sdk_data
+        self.local = local,
         self.signing_certificate_name = signing_certificate_name
         self.provisioning_profile = provisioning_profile
 
@@ -378,10 +387,11 @@ class Instrumenter(object):
         self,
         path_to_app,
         sdk_data,
+        local,
         signing_certificate_name=None,
         provisioning_profile=None,
     ):
-        # type: (str, SdkData, str, str) -> None
+        # type: (str, SdkData, str, str, bool) -> None
         self.path_to_app = Path(path_to_app).absolute()
         self.app_name = path_to_app
         self.app_ext = self.path_to_app.suffix
@@ -389,6 +399,7 @@ class Instrumenter(object):
         self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
             path_to_app=self.path_to_app,
             sdk_data=sdk_data,
+            local=local,
             signing_certificate_name=signing_certificate_name,
             provisioning_profile=provisioning_profile,
         )
@@ -440,6 +451,13 @@ def cli_parser():
         help=argparse.SUPPRESS,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
+    
+    parser.add_argument(
+        "-l", "--local",
+        action="store_true",
+        help="Use local SDK instead of fetching latest",
+    )
+    
 
     # main params
     parser.add_argument(
@@ -481,10 +499,11 @@ def run():
 
     print("Instrumentation start")
     print("Getting assets...")
-    with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
+    with SdkDownloadManager.from_sdk_name(args.sdk, args.local) as sdk_data:
         instrumenter = Instrumenter(
             args.path_to_app,
             sdk_data,
+            args.local,
             getattr(args, "signing_certificate_name", None),
             getattr(args, "provisioning_profile", None),
         )
