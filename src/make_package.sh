@@ -1,4 +1,4 @@
 #!/bin/bash -e
 
-pyinstaller --onefile ./instrument.py
+pyinstaller ./instrument.spec
 mv dist/instrument applitoolsify-ios

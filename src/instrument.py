@@ -18,7 +18,10 @@ __version__ = "0.2.0"
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
-
+if hasattr(sys, 'MEIPASS'):
+    RELATIVE = sys._MEIPASS
+else:
+    RELATIVE = os.getcwd()
 
 def validate_path_to_app(value):
     # type: (str)->bool
@@ -70,14 +73,16 @@ SUPPORTED_FRAMEWORKS = {
         **{
             "name": "UFG_lib.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip",
-            "local_url": f"file://{os.getcwd()}/UFG_lib.xcframework.zip",
+            #"local_url": f"file://{os.getcwd()}/UFG_lib.xcframework.zip",
+            "local_url": f"file://{RELATIVE}/frameworks/UFG_lib.xcframework.zip",
         }
     ),
     SdkParams.ios_classic: SdkData(
         **{
             "name": "EyesiOSHelper.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip",
-            "local_url": f"file://{os.getcwd()}/EyesiOSHelper.zip",
+            #"local_url": f"file://{os.getcwd()}/EyesiOSHelper.zip",
+            "local_url": f"file://{RELATIVE}/frameworks/EyesiOSHelper.zip",
         }
     ),
 }
@@ -124,12 +129,11 @@ class SdkDownloadManager(object):
                 self.sdk_data.name, self.sdk_data.sdk_location
             )
         )
-            
+       
         uri = self.sdk_data.local_url
         if not local:
             uri = self.sdk_data.download_url
 
-        # always download latest sdk
         with urlopen(uri) as zipresp:
             with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
                 extracted_path = Archiver.extract_specific_folder(
@@ -396,6 +400,7 @@ class Instrumenter(object):
         self.app_name = path_to_app
         self.app_ext = self.path_to_app.suffix
         self.sdk_data = sdk_data
+        self.local = True
         self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
             path_to_app=self.path_to_app,
             sdk_data=sdk_data,
