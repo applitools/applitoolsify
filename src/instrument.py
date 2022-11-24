@@ -18,6 +18,7 @@ __version__ = "0.2.0"
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
+# Required when working with pyinstaller
 if hasattr(sys, 'MEIPASS'):
     RELATIVE = sys._MEIPASS
 else:
@@ -73,7 +74,6 @@ SUPPORTED_FRAMEWORKS = {
         **{
             "name": "UFG_lib.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip",
-            #"local_url": f"file://{os.getcwd()}/UFG_lib.xcframework.zip",
             "local_url": f"file://{RELATIVE}/frameworks/UFG_lib.xcframework.zip",
         }
     ),
@@ -81,7 +81,6 @@ SUPPORTED_FRAMEWORKS = {
         **{
             "name": "EyesiOSHelper.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip",
-            #"local_url": f"file://{os.getcwd()}/EyesiOSHelper.zip",
             "local_url": f"file://{RELATIVE}/frameworks/EyesiOSHelper.zip",
         }
     ),
@@ -115,8 +114,8 @@ class SdkDownloadManager(object):
     def remove_sdk_data(self):
         shutil.rmtree(self.sdk_data.sdk_location)
 
-    def download_and_extract(self, local):
-        # type: (bool) -> SdkData
+    def download_and_extract(self):
+        # type: () -> SdkData
         if self.sdk_data.sdk_location.exists():
             print_verbose(
                 "We've detected saved version of `{}` in `{}`".format(
@@ -131,7 +130,7 @@ class SdkDownloadManager(object):
         )
        
         uri = self.sdk_data.local_url
-        if not local:
+        if not self.local:
             uri = self.sdk_data.download_url
 
         with urlopen(uri) as zipresp:
@@ -400,7 +399,7 @@ class Instrumenter(object):
         self.app_name = path_to_app
         self.app_ext = self.path_to_app.suffix
         self.sdk_data = sdk_data
-        self.local = True
+        self.local = local
         self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
             path_to_app=self.path_to_app,
             sdk_data=sdk_data,
