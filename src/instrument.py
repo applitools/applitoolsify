@@ -203,7 +203,7 @@ class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
         log_tgt = artifact_dir.joinpath("android-nmg.log")
         out_dir = ""
         try:
-            out_dir = NMG_lib.main.run(self.path_to_app)
+            out_dir = NMG_lib.main.run(self.path_to_app, False)
         except Exception as e:
             # next line should not happen unless a bug occurs, but leave for safe practice
             # in production
