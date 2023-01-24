@@ -69,7 +69,7 @@ SUPPORTED_FRAMEWORKS = {
     SdkParams.android_nmg: SdkData(
         **{
             "name": "NMG_lib",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib-1.0.106-g8d7b3e3.zip",
+            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib-1.0.106-g85a3a46.zip",
         }
     ),
     SdkParams.ios_nmg: SdkData(
