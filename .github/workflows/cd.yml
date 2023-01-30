@@ -1,5 +1,5 @@
-name: Android injection tests
-run-name: ${{ github.actor }} is performing UT for injection
+name: iOS Deployment
+run-name: ${{ github.actor }} is performing iOS deployment
 on: [push]
 jobs:
   unit-tests:
@@ -26,16 +26,25 @@ jobs:
         if: ${{ !failure() }}
         run: |
           python -m pip install --upgrade pip
-          pip install pytest==6.2.5 pytest-xdist==2.5.0
+          pip install pytest==6.2.5 pytest-xdist==2.5.0 pyinstaller
       
       - name: Make standalone (win)
-        if: ${{ matrix.os == 'windows' }}
+        if: ${{ matrix.os == 'windows-latest' }}
         run: |
           echo "Making bundle"
-          ./bundle.bat
+          cd src
+          bundle.bat
         
       - name: Make standalone (mac)
-        if: ${{ matrix.os == 'macOS' }}
+        if: ${{ matrix.os == 'macOS-latest' }}
         run: |
           echo "Making bundle"
+          cd src
+          ./bundle.sh
+      
+      - name: Make standalone (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          echo "Making bundle"
+          cd src
           ./bundle.sh

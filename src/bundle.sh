@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 which pyinstaller &>/dev/null
 FOUND="$?"
