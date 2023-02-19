@@ -106,7 +106,7 @@ class SdkDownloadManager(object):
 
     def __enter__(self):
         # type: () -> SdkData
-        return self.download_and_extract(self.local)
+        return self.download_and_extract()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.remove_sdk_data()
