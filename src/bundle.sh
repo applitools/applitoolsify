@@ -9,11 +9,15 @@ if [ $FOUND != 0 ]; then
 fi
 VER=$(git rev-parse --short HEAD)
 echo "Making binary version"
-pyinstaller --onefile ./instrument.py
+pyinstaller ./instrument.spec
 echo "After pyinstaller"
 EXT=ios-$(uname)-$VER
+cd ../src/frameworks/
+echo "Get latest framework"
+./get_frameworks.sh
+cd -
+pyinstaller ./instrument.spec
 mv dist/instrument dist/applitoolsify-$EXT
 jfrog rt u dist/applitoolsify-$EXT nmg/android/instrumentation/applitoolsify-$EXT
 echo "Uploaded to Testrepo/nmg/android/instrumentation/applitoolsify-$EXT "
-cd -
 
