@@ -9,6 +9,7 @@ if [ $FOUND != 0 ]; then
 fi
 VER=$(git rev-parse --short HEAD)
 echo "Making binary version"
+pwd
 pyinstaller ./instrument.spec
 echo "After pyinstaller"
 EXT=ios-$(uname)-$VER
