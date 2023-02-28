@@ -16,9 +16,10 @@ echo "After pyinstaller"
 EXT=ios-$(uname)-$VER
 cd ../src/frameworks/
 echo "Get latest framework"
-./get_frameworks.sh
+#./get_frameworks.sh
 cd -
-mv dist/instrument dist/applitoolsify-$EXT
-jfrog rt u dist/applitoolsify-$EXT nmg/android/instrumentation/applitoolsify-$EXT
-echo "Uploaded to Testrepo/nmg/android/instrumentation/applitoolsify-$EXT "
+VER=$(python ./extract.py)
+mv dist/instrument dist/applitoolsify-$VER
+jfrog rt u dist/applitoolsify-$VER nmg/ios/instrumentation/release/__/applitoolsify-$VER
+echo "Uploaded to nmg/ios/instrumentation/release/__/applitoolsify-$VER "
 
