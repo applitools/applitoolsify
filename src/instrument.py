@@ -18,7 +18,11 @@ __version__ = "0.2.0"
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
-
+# Required when working with pyinstaller
+if hasattr(sys, 'MEIPASS'):
+    RELATIVE = sys._MEIPASS
+else:
+    RELATIVE = os.getcwd()
 
 def validate_path_to_app(value):
     # type: (str)->bool
@@ -26,9 +30,9 @@ def validate_path_to_app(value):
     if not path.exists():
         print("! Path `{}` does not exist".format(value))
         return False
-    if path.suffix not in [".app", ".ipa", ".apk"]:
+    if path.suffix not in [".app", ".ipa"]:
         print(
-            "! Supported only `*.app`, `*.ipa` or `*.apk` apps. You provided: `{}`".format(
+            "! Supported only `*.app` or `*.ipa` apps. You provided: `{}`".format(
                 value
             )
         )
@@ -44,17 +48,17 @@ def print_verbose(*args, **kwargs):
 class SdkParams(Enum):
     ios_classic = "ios_classic"
     ios_nmg = "ios_nmg"
-    android_nmg = "android_nmg"
 
 
 class SdkData(object):
     """DTO with SDK data to download and extract."""
 
-    def __init__(self, name, download_url):
-        # type: (str, str) -> None
+    def __init__(self, name, download_url, local_url):
+        # type: (str, str, str) -> None
         self.name = name
         self.download_url = download_url
         self.sdk_location = None  # type: Path | None
+        self.local_url = local_url
 
     def __str__(self):
         return "SdkData<{}>".format(self.name)
@@ -66,22 +70,18 @@ class SdkData(object):
 
 
 SUPPORTED_FRAMEWORKS = {
-    SdkParams.android_nmg: SdkData(
-        **{
-            "name": "NMG_lib",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/android/instrumentation/NMG_lib-1.0.106-g8d7b3e3.zip",
-        }
-    ),
     SdkParams.ios_nmg: SdkData(
         **{
             "name": "UFG_lib.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip",
+            "local_url": f"file://{RELATIVE}/frameworks/UFG_lib.xcframework.zip",
         }
     ),
     SdkParams.ios_classic: SdkData(
         **{
             "name": "EyesiOSHelper.xcframework",
             "download_url": "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip",
+            "local_url": f"file://{RELATIVE}/frameworks/EyesiOSHelper.zip",
         }
     ),
 }
@@ -90,19 +90,19 @@ SUPPORTED_FRAMEWORKS = {
 class SdkDownloadManager(object):
     """Download and extract selected SDK."""
 
-    def __init__(self, sdk_data):
-        # type: (SdkData) -> None
+    def __init__(self, sdk_data, local):
+        # type: (SdkData, bool) -> None
         self.sdk_data = sdk_data
-        # TODO: change it to tmp?
-        self.sdks_dir = Path(sys.path[0])  # curr dir
+        self.local = local
+        self.sdks_dir = Path(os.getcwd())  # curr dir
         self.sdk_data.add_sdk_location(self.sdks_dir.joinpath(self.sdk_data.name))
 
     @classmethod
-    def from_sdk_name(cls, sdk_name):
-        # type: (str) -> SdkDownloadManager
+    def from_sdk_name(cls, sdk_name, local):
+        # type: (str, bool) -> SdkDownloadManager
         sdk = SdkParams(sdk_name)
         sdk_data = SUPPORTED_FRAMEWORKS[sdk]
-        return cls(sdk_data)
+        return cls(sdk_data, local)
 
     def __enter__(self):
         # type: () -> SdkData
@@ -128,8 +128,12 @@ class SdkDownloadManager(object):
                 self.sdk_data.name, self.sdk_data.sdk_location
             )
         )
-        # always download latest sdk
-        with urlopen(self.sdk_data.download_url) as zipresp:
+       
+        uri = self.sdk_data.local_url
+        if not self.local:
+            uri = self.sdk_data.download_url
+
+        with urlopen(uri) as zipresp:
             with zipfile.ZipFile(BytesIO(zipresp.read())) as zfile:
                 extracted_path = Archiver.extract_specific_folder(
                     self.sdks_dir, zfile, extract_dir_name=self.sdk_data.name
@@ -145,11 +149,12 @@ class _InstrumentifyStrategy(object):
     """Base Patch Strategy class. Helps to instrumentify app with specific SDK."""
 
     def __init__(
-        self, path_to_app, sdk_data, signing_certificate_name, provisioning_profile
+        self, path_to_app, sdk_data, local, signing_certificate_name, provisioning_profile
     ):
-        # type: (Path, SdkData, str, str) -> None
+        # type: (Path, SdkData, bool, str, str) -> None
         self.path_to_app = path_to_app
         self.sdk_data = sdk_data
+        self.local = local,
         self.signing_certificate_name = signing_certificate_name
         self.provisioning_profile = provisioning_profile
 
@@ -166,65 +171,6 @@ class _InstrumentifyStrategy(object):
     def instrumentify(self):
         # type: () -> bool
         raise NotImplementedError
-
-
-class AndroidInstrumentifyStrategy(_InstrumentifyStrategy):
-    """
-    Patch Android `apk` with default SDK (XXX: Support multiple sdks).
-
-    This is a very basic implementation essentially calling the main
-    script for android injector provided in the zip file
-    """
-
-    ARTIFACT_DIR = "instrumented-apk"
-
-    @property
-    def app_frameworks(self):
-        # Not used for android, kept bc required
-        return self.path_to_app.joinpath("Frameworks")
-
-    def instrumentify(self):
-        # type: () -> bool
-        print("Preparing application...")
-        cur_path = Path(os.getcwd())
-        # os.chdir is required because we want to create our directories under applitoolsify NMG_lib dir
-        # but still allow them to run in standalone mode
-        os.chdir(self.sdk_data.sdk_location)
-        work_dir = Path(os.getcwd())
-        # Prepare output directory
-        artifact_dir = work_dir.parent.joinpath(self.ARTIFACT_DIR)
-        artifact_dir.mkdir(parents=True, exist_ok=True)
-        # This is the module we downloaded, see source in injection
-        import NMG_lib
-
-        # Get log location from nmg library, after import this file should
-        # exist because logger creates it when loaded
-        log_loc = NMG_lib.common.env.LOG_LOCATION
-        log_tgt = artifact_dir.joinpath("android-nmg.log")
-        out_dir = ""
-        try:
-            out_dir = NMG_lib.main.run(self.path_to_app, True)
-        except Exception as e:
-            # next line should not happen unless a bug occurs, but leave for safe practice
-            # in production
-            # sometimes log file doesn't present which raise an exception during copying
-            if os.path.exists(log_loc):
-                shutil.copyfile(log_loc, log_tgt)
-                print(
-                    f"Instrumentation failed with error: {e}. Please submit {log_tgt} to applitools"
-                )
-            else:
-                print(f"Instrumentation failed with error: {e}. No log file")
-            return False
-
-        apk_loc = Path(out_dir).joinpath("final.apk").joinpath("out-aligned-signed.apk")
-        print("Collecting artifacts")
-        shutil.copyfile(log_loc, log_tgt)
-        target_file = artifact_dir.joinpath("ready.apk")
-        ret = shutil.move(apk_loc, target_file)
-        del NMG_lib
-        os.chdir(cur_path)
-        return ret == target_file
 
 
 class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
@@ -438,24 +384,26 @@ class Instrumenter(object):
     instrument_strategies = {
         "app": IOSAppPatcherInstrumentifyStrategy,
         "ipa": IOSIpaInstrumentifyStrategy,
-        "apk": AndroidInstrumentifyStrategy,
     }
 
     def __init__(
         self,
         path_to_app,
         sdk_data,
+        local,
         signing_certificate_name=None,
         provisioning_profile=None,
     ):
-        # type: (str, SdkData, str, str) -> None
+        # type: (str, SdkData, str, str, bool) -> None
         self.path_to_app = Path(path_to_app).absolute()
         self.app_name = path_to_app
         self.app_ext = self.path_to_app.suffix
         self.sdk_data = sdk_data
+        self.local = local
         self._instrumenter = self.instrument_strategies[self.app_ext.lstrip(".")](
             path_to_app=self.path_to_app,
             sdk_data=sdk_data,
+            local=local,
             signing_certificate_name=signing_certificate_name,
             provisioning_profile=provisioning_profile,
         )
@@ -469,9 +417,7 @@ class Instrumenter(object):
 
     def instrumentify(self):
         # type: () -> bool
-        # Obviously need refactoring
-        android = self.app_ext.lstrip(".") == "apk"
-        if not android and self.was_already_instrumented():
+        if self.was_already_instrumented():
             print_verbose("App already instrumented. Updating...")
             # remove old installation
             shutil.rmtree(self._instrumenter.sdk_in_app_frameworks)
@@ -483,18 +429,11 @@ class Instrumenter(object):
                 self.sdk_data.name, self._instrumenter.sdk_in_app_frameworks
             )
         )
-        if android:
-            print(
-                "Application is ready at {}".format(
-                    AndroidInstrumentifyStrategy.ARTIFACT_DIR + os.sep + "ready.apk"
-                )
+        print(
+            "`{}` is ready for use with the `{}`".format(
+                self.path_to_app, self.sdk_data.name
             )
-        else:
-            print(
-                "`{}` is ready for use with the `{}`".format(
-                    self.path_to_app, self.sdk_data.name
-                )
-            )
+        )
         return True
 
 
@@ -516,12 +455,19 @@ def cli_parser():
         help=argparse.SUPPRESS,
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
+    
+    parser.add_argument(
+        "-l", "--local",
+        action="store_true",
+        help="Use local SDK instead of fetching latest",
+    )
+    
 
     # main params
     parser.add_argument(
         "path_to_app",
         type=str,
-        help="Path to the `.app`, `.ipa` or `.apk` for applitoolsify",
+        help="Path to the `.app` or `.ipa` for applitoolsify",
     )
     parser.add_argument(
         "sdk",
@@ -557,10 +503,11 @@ def run():
 
     print("Instrumentation start")
     print("Getting assets...")
-    with SdkDownloadManager.from_sdk_name(args.sdk) as sdk_data:
+    with SdkDownloadManager.from_sdk_name(args.sdk, args.local) as sdk_data:
         instrumenter = Instrumenter(
             args.path_to_app,
             sdk_data,
+            args.local,
             getattr(args, "signing_certificate_name", None),
             getattr(args, "provisioning_profile", None),
         )
