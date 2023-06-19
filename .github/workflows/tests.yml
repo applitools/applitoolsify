@@ -1,5 +1,5 @@
 name: iOS injection tests
-run-name: ${{ github.actor }} is performing unit tests for injection
+run-name: ${{ github.actor }} is performing unit tests for ios injection
 on: [push] 
 jobs:
   unit-tests:
@@ -9,18 +9,20 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
       fail-fast: false
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+          
       - name: Set up Python
         if: ${{ !failure() }}
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
+      
       - name: Set up Java 11 for apk patcher
         uses: actions/setup-java@v3
         with:
           distribution: 'adopt'
           java-version: '11'
-      - uses: actions/checkout@v2
-        if: ${{ !failure() }}
 
       - name: Install dependencies
         if: ${{ !failure() }}

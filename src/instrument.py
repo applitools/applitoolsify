@@ -19,7 +19,7 @@ __version__ = "0.2.0"
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
 # Required when working with pyinstaller
-if hasattr(sys, 'MEIPASS'):
+if hasattr(sys, '_MEIPASS'):
     RELATIVE = sys._MEIPASS
 else:
     RELATIVE = os.getcwd()
