@@ -6,7 +6,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: [ubuntu-latest, macOS-latest, windows-latest, ARM64]
       fail-fast: false
     steps:
       - name: Set up Python
@@ -36,6 +36,13 @@ jobs:
           bundle.bat
         
       - name: Make standalone (mac)
+        if: ${{ matrix.os == 'macOS-latest' }}
+        run: |
+          echo "Making bundle"
+          cd src
+          ./bundle.sh
+      
+      - name: Make standalone (mac m1)
         if: ${{ matrix.os == 'macOS-latest' }}
         run: |
           echo "Making bundle"
