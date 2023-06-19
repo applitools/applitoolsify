@@ -9,16 +9,14 @@ if [ $FOUND != 0 ]; then
 fi
 VER=$(git rev-parse --short HEAD)
 echo "Making binary version"
-pwd
-ls
 pyinstaller instrument.spec
 echo "After pyinstaller"
-EXT=ios-$(uname)-$VER
+EXT=ios-$(uname)-$(uname -m)-$VER
 cd ../src/frameworks/
 echo "Get latest framework"
 ./get_frameworks.sh
 cd -
-VER=$(python ./extract.py)
+VER=$(python3 ./extract.py)
 mv dist/instrument dist/applitoolsify-$VER
 jfrog rt u dist/applitoolsify-$VER nmg/ios/instrumentation/release/__/applitoolsify-$VER
 echo "Uploaded to nmg/ios/instrumentation/release/__/applitoolsify-$VER "
