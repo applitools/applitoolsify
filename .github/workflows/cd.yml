@@ -39,7 +39,7 @@ jobs:
           JF_TO_IMPORT: ${{ secrets.JF_TO_IMPORT }}
         run: |
           echo "Importing jfrog config"
-          jfrog config import %JF_TO_IMPORT%
+          jf config import %JF_TO_IMPORT%
           echo "Making bundle"
           cd src
           dir
