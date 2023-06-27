@@ -35,9 +35,14 @@ jobs:
       
       - name: Make standalone (win)
         if: ${{ matrix.os == 'windows-latest' }}
+        env:
+          JF_TO_IMPORT: ${{ secrets.JF_TO_IMPORT }}
         run: |
+          echo "Importing jfrog config"
+          jfrog config import "$JF_TO_IMPORT"
           echo "Making bundle"
           cd src
+          dir
           bundle.bat
         
       - name: Make standalone (mac)
