@@ -19,6 +19,7 @@ VER=$(python3 ./extract.py)
 ARCH=$(uname)
 if [ $ARCH == 'Darwin' ]; then
     ARCH='macos'
+fi
 EXT=ios-$ARCH-$(uname -m)-$VER
 mv dist/instrument dist/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT nmg/ios/instrumentation/release/__/applitoolsify-$EXT
