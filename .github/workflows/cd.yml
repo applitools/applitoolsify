@@ -43,7 +43,7 @@ jobs:
           echo "Making bundle"
           cd src
           dir
-          bundle.bat
+          .\bundle.bat
         
       - name: Make standalone (mac)
         if: ${{ matrix.os == 'macOS-latest' }}
