@@ -18,5 +18,5 @@ cd -
 VER=$(python3 ./extract.py)
 EXT=ios-$(uname)-$(uname -m)-$VER
 mv dist/instrument dist/applitoolsify-$EXT
-jfrog rt u dist/applitoolsify-$EXT nmg/ios/instrumentation/release/__/applitoolsify-$EXT
+jf rt u dist/applitoolsify-$EXT nmg/ios/instrumentation/release/__/applitoolsify-$EXT
 echo "Uploaded to nmg/ios/instrumentation/release/__/applitoolsify-$EXT"
