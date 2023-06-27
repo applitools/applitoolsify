@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         if: ${{ matrix.os != 'ARM64'}}
         run: |
-          pip install pytest=6.2.5 pytest-xdist==2.5.0 pyinstaller
+          pip install pytest==6.2.5 pytest-xdist==2.5.0 pyinstaller
       
       - name: Make standalone (win)
         if: ${{ matrix.os == 'windows-latest' }}
