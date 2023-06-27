@@ -28,6 +28,7 @@ jobs:
           pip3 install pytest==6.2.5 pytest-xdist==2.5.0 pyinstaller
 
       - name: Install dependencies
+        if: ${{ matrix.os != 'ARM64'}}
         run: |
           pip install pytest=6.2.5 pytest-xdist==2.5.0 pyinstaller
       
