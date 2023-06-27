@@ -1,5 +1,5 @@
 name: iOS injection tests
-run-name: ${{ github.actor }} is performing unit tests for injection
+run-name: ${{ github.actor }} is performing unit tests for ios injection
 on: [push] 
 jobs:
   unit-tests:

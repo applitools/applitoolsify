@@ -23,9 +23,13 @@ jobs:
         if: ${{ !failure() }}
 
       - name: Install dependencies
-        if: ${{ !failure() }}
+        if: ${{ !failure() && matrix.os == 'ARM64'}}
         run: |
           pip3 install pytest==6.2.5 pytest-xdist==2.5.0 pyinstaller
+
+      - name: Install dependencies
+        run: |
+          pip install pytest=6.2.5 pytest-xdist==2.5.0 pyinstaller
       
       - name: Make standalone (win)
         if: ${{ matrix.os == 'windows-latest' }}

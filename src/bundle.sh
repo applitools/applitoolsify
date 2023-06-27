@@ -11,12 +11,12 @@ VER=$(git rev-parse --short HEAD)
 echo "Making binary version"
 pyinstaller instrument.spec
 echo "After pyinstaller"
-EXT=ios-$(uname)-$(uname -m)-$VER
 cd ../src/frameworks/
 echo "Get latest framework"
 ./get_frameworks.sh
 cd -
 VER=$(python3 ./extract.py)
+EXT=ios-$(uname)-$(uname -m)-$VER
 mv dist/instrument dist/applitoolsify-$VER
-jfrog rt u dist/applitoolsify-$VER nmg/ios/instrumentation/release/__/applitoolsify-$VER
+jfrog rt u dist/applitoolsify-$EXT nmg/ios/instrumentation/release/__/applitoolsify-$EXT
 echo "Uploaded to nmg/ios/instrumentation/release/__/applitoolsify-$VER "
