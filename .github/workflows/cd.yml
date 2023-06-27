@@ -2,25 +2,26 @@ name: iOS Deployment
 run-name: ${{ github.actor }} is performing iOS deployment
 on: [push]
 jobs:
-  unit-tests:
+  deploy:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest, ARM64]
       fail-fast: false
     steps:
+      - uses: actions/checkout@v2
+      
       - name: Set up Python
         if: ${{ matrix.os != 'ARM64' && !failure() }}
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
-      - name: Set up Java 11 for apk patcher
-        uses: actions/setup-java@v3
+      
+      - name: Setup jfrog
+        if: ${{ !failure() && matrix.os != 'ARM64' }}
+        uses: jfrog/setup-jfrog-cli@v3
         with:
-          distribution: 'adopt'
-          java-version: '11'
-      - uses: actions/checkout@v2
-        if: ${{ !failure() }}
+          version: latest
 
       - name: Install dependencies
         if: ${{ !failure() && matrix.os == 'ARM64'}}
@@ -41,21 +42,39 @@ jobs:
         
       - name: Make standalone (mac)
         if: ${{ matrix.os == 'macOS-latest' }}
+        env:
+          JF_TO_IMPORT: ${{ secrets.JF_TO_IMPORT }}
         run: |
+          echo "Importing jfrog config"
+          jfrog config import "$JF_TO_IMPORT"
+          echo "Entering bundle"
+          cd bundle
           echo "Making bundle"
           cd src
           ./bundle.sh
       
       - name: Make standalone (mac m1)
         if: ${{ matrix.os == 'ARM64' }}
+        env:
+          JF_TO_IMPORT: ${{ secrets.JF_TO_IMPORT }}
         run: |
+          echo "Importing jfrog config"
+          jfrog config import "$JF_TO_IMPORT"
+          echo "Entering bundle"
+          cd bundle
           echo "Making bundle"
           cd src
           ./bundle.sh
       
       - name: Make standalone (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
+        env:
+          JF_TO_IMPORT: ${{ secrets.JF_TO_IMPORT }}
         run: |
+          echo "Importing jfrog config"
+          jfrog config import "$JF_TO_IMPORT"
+          echo "Entering bundle"
+          cd bundle
           echo "Making bundle"
           cd src
           ./bundle.sh
