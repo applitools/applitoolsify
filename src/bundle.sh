@@ -8,13 +8,13 @@ if [ $FOUND != 0 ]; then
     exit 1
 fi
 VER=$(git rev-parse --short HEAD)
-echo "Making binary version"
-pyinstaller instrument.spec
-echo "After pyinstaller"
 cd ../src/frameworks/
 echo "Get latest framework"
 ./get_frameworks.sh
 cd -
+echo "Making binary version"
+pyinstaller instrument.spec
+echo "After pyinstaller"
 VER=$(python3 ./extract.py)
 ARCH=$(uname)
 if [ $ARCH == 'Darwin' ]; then

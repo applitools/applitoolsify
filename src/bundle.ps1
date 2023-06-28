@@ -7,6 +7,10 @@ jfrog config import $apiKey
 pip install pyinstaller
 # Get injection version with g prefix for binary
 $VER = $(python3 ./extract.py)
+cd ..\src\frameworks\
+echo "Get latest framework"
+.\get_frameworks.sh
+cd -
 $ARCH = 'win'
 echo "Making binary version"
 pyinstaller instrument.spec
