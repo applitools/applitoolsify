@@ -3,7 +3,7 @@ import zipfile
 import os
 
 archive = zipfile.ZipFile(f'.{os.sep}frameworks{os.sep}UFG_lib.xcframework.zip', 'r')
-inner_loc = f"UFG_lib.xcframework{os.sep}ios-arm64{os.sep}UFG_lib.framework{os.sep}Info.plist"
+inner_loc = f"UFG_lib.xcframework/ios-arm64/UFG_lib.framework/Info.plist"
 imgdata = archive.read(inner_loc)
 
 pl = plistlib.loads(imgdata)
