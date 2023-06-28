@@ -38,12 +38,10 @@ jobs:
         env:
           JF_TO_IMPORT: ${{ secrets.JF_TO_IMPORT }}
         run: |
-          echo "Importing jfrog config"
-          jf config import "%JF_TO_IMPORT%"
-          echo "Making bundle"
-          cd src
-          dir
-          .\bundle.bat
+      - name: Make standalone (windows-latest)
+        run: |
+          cd bundle
+          .\bundle.ps1 ${{ secrets.JF_TO_IMPORT }}
         
       - name: Make standalone (mac)
         if: ${{ matrix.os == 'macOS-latest' }}
