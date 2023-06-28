@@ -13,11 +13,11 @@ pyinstaller instrument.spec
 echo "After pyinstaller"
 # Construct artifact filename
 $EXT = "ios-$ARCH-x86_64-$VER"
-move dist/instrument dist/applitoolsify-$EXT
+move "dist/instrument" "dist/applitoolsify-$EXT"
 
 echo "Upload release binary"
 jfrog rt u "dist/applitoolsify-$EXT" "$nmg/ios/instrumentation/release/__/applitoolsify-$EXT"
 
-echo artifact: $ARTIFACT
-echo tgt_artifact: $TGT_ARTIFACT
-echo "URL: https://applitools.jfrog.io/artifactory/"+$TGT_ARTIFACT 
+echo "artifact: $ARTIFACT"
+echo "tgt_artifact: $TGT_ARTIFACT"
+echo "URL: https://applitools.jfrog.io/artifactory/$TGT_ARTIFACT"
