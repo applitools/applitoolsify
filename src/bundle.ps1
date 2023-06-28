@@ -5,12 +5,13 @@ echo "Installing pyinstaller"
 jfrog config import $apiKey
 # Install pyinstaller
 pip install pyinstaller
-# Get injection version with g prefix for binary
-$VER = $(python3 ./extract.py)
+# Handle frameworks for standalone mode
 cd ..\src\frameworks\
 echo "Get latest framework"
 .\get_frameworks.sh
 cd -
+# Get injection version with g prefix for binary
+$VER = $(python3 ./extract.py)
 $ARCH = 'win'
 echo "Making binary version"
 pyinstaller instrument.spec
