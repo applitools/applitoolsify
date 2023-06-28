@@ -14,7 +14,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.request import urlopen
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 
 FILES_COPY_SKIP_LIST = [".DS_Store"]
 VERBOSE = False
