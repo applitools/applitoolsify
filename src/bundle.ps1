@@ -13,6 +13,7 @@ pyinstaller instrument.spec
 echo "After pyinstaller"
 # Construct artifact filename
 $EXT = "ios-$ARCH-x86_64-$VER"
+ls
 move "dist/instrument" "dist/applitoolsify-$EXT"
 
 echo "Upload release binary"
