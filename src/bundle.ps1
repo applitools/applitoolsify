@@ -19,10 +19,10 @@ echo "After pyinstaller"
 # Construct artifact filename
 $EXT = "ios-$ARCH-x86_64-$VER"
 ls
-move "dist/instrument" "dist/applitoolsify-$EXT"
+move "dist/instrument.exe" "dist/applitoolsify-$EXT.exe"
 
 echo "Upload release binary"
-jfrog rt u "dist/applitoolsify-$EXT" "$nmg/ios/instrumentation/release/__/applitoolsify-$EXT"
+jfrog rt u "dist/applitoolsify-$EXT.exe" "$nmg/ios/instrumentation/release/__/applitoolsify-$EXT.exe"
 
 echo "artifact: $ARTIFACT"
 echo "tgt_artifact: $TGT_ARTIFACT"
