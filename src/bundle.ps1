@@ -12,7 +12,7 @@ echo "Making binary version"
 pyinstaller instrument.spec
 echo "After pyinstaller"
 # Construct artifact filename
-$EXT = ios-$ARCH-x86_64-$VER
+$EXT = "ios-$ARCH-x86_64-$VER"
 move dist/instrument dist/applitoolsify-$EXT
 
 echo "Upload release binary"
