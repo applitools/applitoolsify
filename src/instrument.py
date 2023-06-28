@@ -469,11 +469,6 @@ def cli_parser():
         type=str,
         help="Path to the `.app` or `.ipa` for applitoolsify",
     )
-    parser.add_argument(
-        "sdk",
-        choices=[e.value for e in SdkParams],
-        help="Select SDK for applitoolsify",
-    )
 
     # optional signing
     # parser.add_argument(
@@ -503,7 +498,7 @@ def run():
 
     print("Instrumentation start")
     print("Getting assets...")
-    with SdkDownloadManager.from_sdk_name(args.sdk, args.local) as sdk_data:
+    with SdkDownloadManager.from_sdk_name("ios_nmg", args.local) as sdk_data:
         instrumenter = Instrumenter(
             args.path_to_app,
             sdk_data,
