@@ -8,7 +8,7 @@ pip install pyinstaller
 # Handle frameworks for standalone mode
 cd ..\src\frameworks\
 echo "Get latest framework"
-.\get_frameworks.sh
+.\get_frameworks.ps1
 cd -
 # Get injection version with g prefix for binary
 $VER = $(python3 ./extract.py)
