@@ -36,7 +36,8 @@ jobs:
       - name: Make standalone (win)
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          ./bundle.ps1 ${{ secrets.JF_TO_IMPORT }}
+          cd src
+          .\bundle.ps1 ${{ secrets.JF_TO_IMPORT }}
         
       - name: Make standalone (mac)
         if: ${{ matrix.os == 'macOS-latest' }}
