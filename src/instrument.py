@@ -481,14 +481,11 @@ def cli_parser():
     #     nargs="?",
     #     help="Provisioning Profile to be Used",
     # )
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
     return parser
 
 
 def run():
-    args = cli_parser().parse_args()
+    args, _ = cli_parser().parse_known_args()
     if not validate_path_to_app(args.path_to_app):
         sys.exit(1)
 
