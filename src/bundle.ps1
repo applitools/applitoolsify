@@ -17,7 +17,8 @@ echo "Making binary version"
 pyinstaller instrument.spec
 echo "After pyinstaller"
 # Construct artifact filename
-$EXT = "ios-$ARCH-x86_64-$VER.exe"
+$EXT = "ios-$ARCH-x86_64.exe"
+$EXT_VER = "$EXT-$VER.exe"
 
 echo "Upload release binary"
 jfrog rt u "dist/applitoolsify-$EXT" "mobile/ios/applitoolsify/release/applitoolsify-$EXT"
