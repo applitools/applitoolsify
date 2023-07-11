@@ -10,8 +10,7 @@ pytestmark = [
     pytest.mark.parametrize(
         "sdk, framework",
         [
-            ("ios_classic", "EyesiOSHelper.xcframework"),
-            ("ios_nmg", "UFG_lib.xcframework"),
+            ("ios_nmg", "Applitools_iOS.xcframework"),
         ],
     )
 ]
