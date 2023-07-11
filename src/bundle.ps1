@@ -21,6 +21,8 @@ $INJ_VER=$(git describe --tags)
 $EXT = "ios-$ARCH-x86_64.exe"
 $EXT_VER = "$EXT-$VER.exe"
 
+mv dist/instrument.exe dist/applitoolsify-$EXT
+
 echo "Upload release binary"
 jfrog rt u "dist/applitoolsify-$EXT" "mobile/ios/applitoolsify/release/applitoolsify-$EXT"
 jfrog rt u "dist/applitoolsify-$EXT" "mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-$EXT"

@@ -1,6 +1,6 @@
 name: iOS Deployment
 run-name: ${{ github.actor }} is performing iOS deployment
-on: [push]
+on: [workflow_dispatch]
 jobs:
   deploy:
     runs-on: ${{ matrix.os }}
