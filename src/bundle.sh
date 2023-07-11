@@ -20,7 +20,8 @@ ARCH=$(uname)
 if [ $ARCH == 'Darwin' ]; then
     ARCH='macos'
 fi
-EXT=ios-$ARCH-$(uname -m)-$VER
+EXT=ios-$ARCH-$(uname -m)
+EXT_VER=$EXT-$VER
 mv dist/instrument dist/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/release/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/$VER/applitoolsify-$EXT
