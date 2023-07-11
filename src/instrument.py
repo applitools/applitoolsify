@@ -46,7 +46,6 @@ def print_verbose(*args, **kwargs):
 
 
 class SdkParams(Enum):
-    ios_classic = "ios_classic"
     ios_nmg = "ios_nmg"
 
 
@@ -72,16 +71,9 @@ class SdkData(object):
 SUPPORTED_FRAMEWORKS = {
     SdkParams.ios_nmg: SdkData(
         **{
-            "name": "UFG_lib.xcframework",
-            "download_url": "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip",
-            "local_url": f"file://{RELATIVE}/frameworks/UFG_lib.xcframework.zip",
-        }
-    ),
-    SdkParams.ios_classic: SdkData(
-        **{
-            "name": "EyesiOSHelper.xcframework",
-            "download_url": "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip",
-            "local_url": f"file://{RELATIVE}/frameworks/EyesiOSHelper.zip",
+            "name": "Applitools_iOS.xcframework",
+            "download_url": "https://applitools.jfrog.io/artifactory/mobile/ios/framework/release/Applitools_iOS.xcframework.zip",
+            "local_url": f"file://{RELATIVE}/frameworks/Applitools_iOS.xcframework.zip",
         }
     ),
 }
@@ -442,7 +434,7 @@ def cli_parser():
 
     parser = argparse.ArgumentParser(
         prog="python applitoolsify.py",
-        description="Applitoolsify (v{}) with UFG_lib or EyesiOSHelper SDK.".format(
+        description="Applitoolsify (v{}) with Applitools iOS".format(
             __version__
         ),
         add_help=False,

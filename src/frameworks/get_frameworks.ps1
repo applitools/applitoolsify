@@ -1,2 +1,1 @@
-Invoke-WebRequest -Uri "https://applitools.jfrog.io/artifactory/nmg/ios/instrumentation/UFG_lib.xcframework.zip" -OutFile "UFG_lib.xcframework.zip"
-Invoke-WebRequest -Uri "https://applitools.jfrog.io/artifactory/iOS/EyesiOSHelper/EyesiOSHelper.zip" -OutFile "EyesiOSHelper.zip"
+Invoke-WebRequest -Uri "https://applitools.jfrog.io/artifactory/mobile/ios/framework/release/Applitools_iOS.xcframework.zip" -OutFile "Applitools_iOS.xcframework.zip"

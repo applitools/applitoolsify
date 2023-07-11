@@ -20,7 +20,8 @@ echo "After pyinstaller"
 $EXT = "ios-$ARCH-x86_64-$VER.exe"
 
 echo "Upload release binary"
-jfrog rt u "dist/instrument.exe" "nmg/ios/instrumentation/release/__/applitoolsify-$EXT"
+jfrog rt u "dist/applitoolsify-$EXT" "mobile/ios/applitoolsify/release/applitoolsify-$EXT"
+jfrog rt u "dist/applitoolsify-$EXT" "mobile/ios/applitoolsify/$VER/applitoolsify-$EXT"
 
 echo "artifact: $ARTIFACT"
 echo "tgt_artifact: $TGT_ARTIFACT"
