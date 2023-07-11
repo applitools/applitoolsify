@@ -20,10 +20,11 @@ ARCH=$(uname)
 if [ $ARCH == 'Darwin' ]; then
     ARCH='macos'
 fi
+INJ_VER=$(git describe --tags)
 EXT=ios-$ARCH-$(uname -m)
 EXT_VER=$EXT-$VER
 mv dist/instrument dist/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/release/applitoolsify-$EXT
-jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/$VER/applitoolsify-$EXT
-echo "Uploaded to mobile/ios/applitoolsify/$VER/applitoolsify-$EXT"
+jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-$EXT
+echo "Uploaded to mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-$EXT"
 echo "Uploaded to mobile/ios/applitoolsify/release/applitoolsify-$EXT"
