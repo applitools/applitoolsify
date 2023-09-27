@@ -176,6 +176,18 @@ class IOSAppPatcherInstrumentifyStrategy(_InstrumentifyStrategy):
         # type: () -> bool
         return shutil.copytree(self.sdk_data.sdk_location, self.sdk_in_app_frameworks)
 
+class ZipFileWithPermissions(zipfile.ZipFile):
+    """ Custom ZipFile class handling file permissions. """
+    def _extract_member(self, member, targetpath, pwd):
+        if not isinstance(member, zipfile.ZipInfo):
+            member = self.getinfo(member)
+
+        targetpath = super()._extract_member(member, targetpath, pwd)
+
+        attr = member.external_attr >> 16
+        if attr != 0:
+            os.chmod(targetpath, attr)
+        return targetpath
 
 class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
     """Patch IOS `ipa` with specific SDK and sign with a specified certificate."""
@@ -190,7 +202,7 @@ class IOSIpaInstrumentifyStrategy(_InstrumentifyStrategy):
         self.extracted_dir_path = Path(self.tmp_dir).joinpath("extracted")
         self.entitlements_file_path = Path(self.tmp_dir).joinpath("entitlements.plist")
         self._app_in_payload = None
-        with zipfile.ZipFile(self.path_to_app) as zfile:
+        with ZipFileWithPermissions(self.path_to_app) as zfile:
             zfile.extractall(self.extracted_dir_path)
 
     @property
