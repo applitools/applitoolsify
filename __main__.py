@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
-"""
-This file is deprecated, __main__.py is the replacement to allow `python -mapplitools` invokation.
-Required to run from zip file
-"""
-
 import sys
-from src.instrument import run
-
+from .src.instrument import run
 # stop writ *.pyc files to prevent from caching
 sys.dont_write_bytecode = True
 
