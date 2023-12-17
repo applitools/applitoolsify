@@ -23,8 +23,12 @@ fi
 INJ_VER=$(git describe --tags)
 EXT=ios-$ARCH-$(uname -m)
 EXT_VER=$EXT-$VER
+
+./make_python.sh
+
 mv dist/instrument dist/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/release/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-$EXT
+jf rt u ../../applitoolsify-ios.zip mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-ios.zip
 echo "Uploaded to mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-$EXT"
 echo "Uploaded to mobile/ios/applitoolsify/release/applitoolsify-$EXT"

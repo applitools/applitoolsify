@@ -7,4 +7,4 @@ cd ..
 loc=$(pwd)
 PATH=$(basename $loc)
 cd ..
-/usr/bin/zip -r "applitoolsify.zip" "$PATH"
+/usr/bin/zip -r "applitoolsify-ios.zip" "$PATH"
