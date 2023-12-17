@@ -5,6 +5,6 @@ cd frameworks
 cd -
 cd ..
 loc=$(pwd)
-PATH=$(basename $loc)
+CWD=$(basename $loc)
 cd ..
-/usr/bin/zip -r "applitoolsify-ios.zip" "$PATH"
+/usr/bin/zip -r "applitoolsify-ios.zip" "$CWD"
