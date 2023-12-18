@@ -30,5 +30,6 @@ mv dist/instrument dist/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/release/applitoolsify-$EXT
 jf rt u dist/applitoolsify-$EXT mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-$EXT
 jf rt u ../../applitoolsify-ios.zip mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-ios.zip
+jf rt u ../../applitoolsify-ios.zip mobile/ios/applitoolsify/release/applitoolsify-ios.zip
 echo "Uploaded to mobile/ios/applitoolsify/$VER/$INJ_VER/applitoolsify-$EXT"
 echo "Uploaded to mobile/ios/applitoolsify/release/applitoolsify-$EXT"
